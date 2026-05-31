@@ -3,6 +3,7 @@ package postgre
 import (
 	"context"
 	"database/sql"
+	_ "embed"
 
 	"github.com/YarKhan02/BlackBird/internal/domain/role"
 	"github.com/google/uuid"
@@ -16,8 +17,32 @@ func NewRoleRepository(db *sql.DB) *RoleRepository {
 	return &RoleRepository{db: db}
 }
 
+//go:embed sql/role_list_global.sql
+var roleListGlobalSQL string
+
+//go:embed sql/role_add_global.sql
+var roleAddGlobalSQL string
+
+//go:embed sql/role_remove_global.sql
+var roleRemoveGlobalSQL string
+
+//go:embed sql/role_get_user_global.sql
+var roleGetUserGlobalSQL string
+
+//go:embed sql/role_add_user_app.sql
+var roleAddUserAppSQL string
+
+//go:embed sql/role_remove_user_app.sql
+var roleRemoveUserAppSQL string
+
+//go:embed sql/role_get_all_user_app.sql
+var roleGetAllUserAppSQL string
+
+//go:embed sql/role_exists.sql
+var roleExistsSQL string
+
 func (r *RoleRepository) ListGlobalRoles(ctx context.Context) ([]role.GlobalRole, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT id, name FROM global_roles ORDER BY id`)
+	rows, err := r.db.QueryContext(ctx, roleListGlobalSQL)
 	if err != nil {
 		return nil, err
 	}
@@ -35,11 +60,7 @@ func (r *RoleRepository) ListGlobalRoles(ctx context.Context) ([]role.GlobalRole
 }
 
 func (r *RoleRepository) AddGlobalRole(ctx context.Context, userID uuid.UUID, roleName string) error {
-	res, err := r.db.ExecContext(ctx, `
-		INSERT INTO user_global_roles (user_id, role_id)
-		SELECT $1, id FROM global_roles WHERE name = $2
-		ON CONFLICT DO NOTHING
-	`, userID, roleName)
+	res, err := r.db.ExecContext(ctx, roleAddGlobalSQL, userID, roleName)
 	if err != nil {
 		return err
 	}
@@ -47,10 +68,7 @@ func (r *RoleRepository) AddGlobalRole(ctx context.Context, userID uuid.UUID, ro
 }
 
 func (r *RoleRepository) RemoveGlobalRole(ctx context.Context, userID uuid.UUID, roleName string) error {
-	res, err := r.db.ExecContext(ctx, `
-		DELETE FROM user_global_roles
-		WHERE user_id = $1 AND role_id = (SELECT id FROM global_roles WHERE name = $2)
-	`, userID, roleName)
+	res, err := r.db.ExecContext(ctx, roleRemoveGlobalSQL, userID, roleName)
 	if err != nil {
 		return err
 	}
@@ -58,13 +76,7 @@ func (r *RoleRepository) RemoveGlobalRole(ctx context.Context, userID uuid.UUID,
 }
 
 func (r *RoleRepository) GetUserGlobalRoles(ctx context.Context, userID uuid.UUID) ([]string, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT gr.name
-		FROM user_global_roles ugr
-		JOIN global_roles gr ON gr.id = ugr.role_id
-		WHERE ugr.user_id = $1
-		ORDER BY gr.id
-	`, userID)
+	rows, err := r.db.QueryContext(ctx, roleGetUserGlobalSQL, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -82,30 +94,17 @@ func (r *RoleRepository) GetUserGlobalRoles(ctx context.Context, userID uuid.UUI
 }
 
 func (r *RoleRepository) AddUserAppRole(ctx context.Context, userID uuid.UUID, appID uuid.UUID, roleName string) error {
-	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO user_app_roles (user_id, app_id, role)
-		VALUES ($1, $2, $3)
-		ON CONFLICT DO NOTHING
-	`, userID, appID, roleName)
+	_, err := r.db.ExecContext(ctx, roleAddUserAppSQL, userID, appID, roleName)
 	return err
 }
 
 func (r *RoleRepository) RemoveUserAppRole(ctx context.Context, userID uuid.UUID, appID uuid.UUID, roleName string) error {
-	_, err := r.db.ExecContext(ctx, `
-		DELETE FROM user_app_roles
-		WHERE user_id = $1 AND app_id = $2 AND role = $3
-	`, userID, appID, roleName)
+	_, err := r.db.ExecContext(ctx, roleRemoveUserAppSQL, userID, appID, roleName)
 	return err
 }
 
 func (r *RoleRepository) GetAllUserAppRoles(ctx context.Context, userID uuid.UUID) (map[string][]string, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT a.client_id, uar.role
-		FROM user_app_roles uar
-		JOIN registered_apps a ON a.id = uar.app_id
-		WHERE uar.user_id = $1
-		ORDER BY a.client_id
-	`, userID)
+	rows, err := r.db.QueryContext(ctx, roleGetAllUserAppSQL, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +132,7 @@ func ensureRoleExists(ctx context.Context, db *sql.DB, roleName string, res sql.
 	}
 
 	var exists bool
-	err = db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM global_roles WHERE name = $1)`, roleName).Scan(&exists)
+	err = db.QueryRowContext(ctx, roleExistsSQL, roleName).Scan(&exists)
 	if err != nil {
 		return err
 	}

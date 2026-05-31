@@ -3,6 +3,7 @@ package postgre
 import (
 	"context"
 	"database/sql"
+	_ "embed"
 
 	"github.com/YarKhan02/BlackBird/internal/domain/token"
 	"github.com/google/uuid"
@@ -16,47 +17,59 @@ func NewTokenRepository(db *sql.DB) *TokenRepository {
 	return &TokenRepository{db: db}
 }
 
+//go:embed sql/token_create.sql
+var tokenCreateSQL string
+
+//go:embed sql/token_find_by_hash.sql
+var tokenFindByHashSQL string
+
+//go:embed sql/token_revoke.sql
+var tokenRevokeSQL string
+
+//go:embed sql/token_revoke_all_for_user.sql
+var tokenRevokeAllForUserSQL string
+
+//go:embed sql/token_list_by_user.sql
+var tokenListByUserSQL string
+
+//go:embed sql/token_delete_expired.sql
+var tokenDeleteExpiredSQL string
+
 func (r *TokenRepository) Create(ctx context.Context, rt *token.RefreshToken) error {
 	rt.ID = uuid.New()
 	var appID uuid.NullUUID
 	if rt.AppID != nil {
 		appID = uuid.NullUUID{UUID: *rt.AppID, Valid: true}
 	}
-	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO refresh_tokens (id, user_id, token_hash, app_id, user_agent, ip_address, expires_at, revoked)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE)
-		RETURNING created_at
-	`, rt.ID, rt.UserID, rt.TokenHash, appID, rt.UserAgent, rt.IPAddress, rt.ExpiresAt).Scan(&rt.CreatedAt)
+	err := r.db.QueryRowContext(ctx, tokenCreateSQL,
+		rt.ID,
+		rt.UserID,
+		rt.TokenHash,
+		appID,
+		rt.UserAgent,
+		rt.IPAddress,
+		rt.ExpiresAt,
+	).Scan(&rt.CreatedAt)
 	return err
 }
 
 func (r *TokenRepository) FindByHash(ctx context.Context, hash string) (*token.RefreshToken, error) {
-	row := r.db.QueryRowContext(ctx, `
-		SELECT id, user_id, token_hash, app_id, user_agent, ip_address, expires_at, revoked, revoked_at, created_at
-		FROM refresh_tokens WHERE token_hash = $1
-	`, hash)
+	row := r.db.QueryRowContext(ctx, tokenFindByHashSQL, hash)
 	return scanRefreshToken(row)
 }
 
 func (r *TokenRepository) Revoke(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE refresh_tokens SET revoked = TRUE, revoked_at = NOW() WHERE id = $1
-	`, id)
+	_, err := r.db.ExecContext(ctx, tokenRevokeSQL, id)
 	return err
 }
 
 func (r *TokenRepository) RevokeAllForUser(ctx context.Context, userID uuid.UUID) error {
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE refresh_tokens SET revoked = TRUE, revoked_at = NOW() WHERE user_id = $1 AND revoked = FALSE
-	`, userID)
+	_, err := r.db.ExecContext(ctx, tokenRevokeAllForUserSQL, userID)
 	return err
 }
 
 func (r *TokenRepository) ListByUserID(ctx context.Context, userID uuid.UUID) ([]*token.RefreshToken, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, user_id, token_hash, app_id, user_agent, ip_address, expires_at, revoked, revoked_at, created_at
-		FROM refresh_tokens WHERE user_id = $1 ORDER BY created_at DESC
-	`, userID)
+	rows, err := r.db.QueryContext(ctx, tokenListByUserSQL, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +87,7 @@ func (r *TokenRepository) ListByUserID(ctx context.Context, userID uuid.UUID) ([
 }
 
 func (r *TokenRepository) DeleteExpired(ctx context.Context) (int64, error) {
-	res, err := r.db.ExecContext(ctx, `DELETE FROM refresh_tokens WHERE expires_at < NOW()`)
+	res, err := r.db.ExecContext(ctx, tokenDeleteExpiredSQL)
 	if err != nil {
 		return 0, err
 	}

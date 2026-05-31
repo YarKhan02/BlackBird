@@ -3,6 +3,7 @@ package postgre
 import (
 	"context"
 	"database/sql"
+	_ "embed"
 	"time"
 
 	"github.com/YarKhan02/BlackBird/internal/domain/user"
@@ -17,45 +18,68 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
+//go:embed sql/user_create.sql
+var userCreateSQL string
+
+//go:embed sql/user_find_by_id.sql
+var userFindByIDSQL string
+
+//go:embed sql/user_find_by_email.sql
+var userFindByEmailSQL string
+
+//go:embed sql/user_update.sql
+var userUpdateSQL string
+
+//go:embed sql/user_update_password.sql
+var userUpdatePasswordSQL string
+
+//go:embed sql/user_update_failed_attempts.sql
+var userUpdateFailedAttemptsSQL string
+
+//go:embed sql/user_ban.sql
+var userBanSQL string
+
+//go:embed sql/user_unban.sql
+var userUnbanSQL string
+
 func (r *UserRepository) Create(ctx context.Context, u *user.User) error {
 	u.ID = uuid.New()
-	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO users (id, email, password_hash, is_verified, is_banned, failed_attempts, locked_until)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING created_at, updated_at
-	`, u.ID, u.Email, u.PasswordHash, u.IsVerified, u.IsBanned, u.FailedAttempts, u.LockedUntil).Scan(&u.CreatedAt, &u.UpdatedAt)
+	err := r.db.QueryRowContext(ctx, userCreateSQL,
+		u.ID,
+		u.Email,
+		u.PasswordHash,
+		u.IsVerified,
+		u.IsBanned,
+		u.FailedAttempts,
+		u.LockedUntil,
+	).Scan(&u.CreatedAt, &u.UpdatedAt)
 	return err
 }
 
 func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*user.User, error) {
-	row := r.db.QueryRowContext(ctx, `
-		SELECT id, email, password_hash, is_verified, is_banned, failed_attempts, locked_until, created_at, updated_at
-		FROM users WHERE id = $1
-	`, id)
+	row := r.db.QueryRowContext(ctx, userFindByIDSQL, id)
 	return scanUser(row)
 }
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*user.User, error) {
-	row := r.db.QueryRowContext(ctx, `
-		SELECT id, email, password_hash, is_verified, is_banned, failed_attempts, locked_until, created_at, updated_at
-		FROM users WHERE email = $1
-	`, email)
+	row := r.db.QueryRowContext(ctx, userFindByEmailSQL, email)
 	return scanUser(row)
 }
 
 func (r *UserRepository) Update(ctx context.Context, u *user.User) error {
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE users
-		SET email = $2, is_verified = $3, is_banned = $4, failed_attempts = $5, locked_until = $6, updated_at = NOW()
-		WHERE id = $1
-	`, u.ID, u.Email, u.IsVerified, u.IsBanned, u.FailedAttempts, u.LockedUntil)
+	_, err := r.db.ExecContext(ctx, userUpdateSQL,
+		u.ID,
+		u.Email,
+		u.IsVerified,
+		u.IsBanned,
+		u.FailedAttempts,
+		u.LockedUntil,
+	)
 	return err
 }
 
 func (r *UserRepository) UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error {
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1
-	`, id, passwordHash)
+	_, err := r.db.ExecContext(ctx, userUpdatePasswordSQL, id, passwordHash)
 	return err
 }
 
@@ -65,23 +89,17 @@ func (r *UserRepository) UpdateFailedAttempts(ctx context.Context, id uuid.UUID,
 		lock = sql.NullTime{Time: *lockedUntil, Valid: true}
 	}
 
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE users SET failed_attempts = $2, locked_until = $3, updated_at = NOW() WHERE id = $1
-	`, id, attempts, lock)
+	_, err := r.db.ExecContext(ctx, userUpdateFailedAttemptsSQL, id, attempts, lock)
 	return err
 }
 
 func (r *UserRepository) Ban(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE users SET is_banned = TRUE, updated_at = NOW() WHERE id = $1
-	`, id)
+	_, err := r.db.ExecContext(ctx, userBanSQL, id)
 	return err
 }
 
 func (r *UserRepository) Unban(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE users SET is_banned = FALSE, updated_at = NOW() WHERE id = $1
-	`, id)
+	_, err := r.db.ExecContext(ctx, userUnbanSQL, id)
 	return err
 }
 

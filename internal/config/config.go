@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -21,6 +23,9 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
+	// Load .env if present to simplify local development.
+	_ = godotenv.Load()
+
 	cfg := &Config{
 		Addr:              getEnv("ADDR", ":8080"),
 		DatabaseURL:       mustEnv("DATABASE_URL"),

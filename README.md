@@ -76,7 +76,16 @@ export ENV="development"
 export JWT_ISSUER="auth.example.com"
 export ACCESS_TOKEN_TTL="15m"
 export REFRESH_TOKEN_TTL="720h"
+
+# Observability
+export LOG_LEVEL="info"
+export LOG_FILE="./logs/app.log"
+export SENTRY_DSN=""                  # empty disables Sentry (no-op)
+export SENTRY_ENVIRONMENT="development"
+export SENTRY_TRACES_SAMPLE_RATE="0.0"
 ```
+
+See `.env.example` for a copy-paste template.
 
 ### 5) Run the server
 
@@ -128,9 +137,56 @@ Authorization: Bearer <access_token>
 - Validate `iss` (issuer), `exp` (expiration), and `sub` (user ID)
 - Use `global_roles` and `apps` claims for authorization
 
+## Observability
+
+BlackBird ships logs, metrics, and error tracking out of the box.
+
+| Signal  | How                                                                 | Where to view                         |
+| ------- | ------------------------------------------------------------------- | ------------------------------------- |
+| Logs    | Structured JSON (`slog`) to stdout + rotating `./logs/app.log`      | Grafana Explore (via Loki/Promtail)   |
+| Metrics | Prometheus client at `GET /metrics` (request count/latency/in-flight) | Prometheus + Grafana dashboard        |
+| Errors  | Sentry SDK (panics + 5xx responses), enriched with `request_id`     | sentry.io project (when DSN set)      |
+
+### Run the monitoring stack
+
+The app runs locally (`go run ./cmd/server`); the backends run in Docker:
+
+```sh
+docker compose -f monitoring/docker-compose.yml up -d
+```
+
+This starts:
+
+- **Prometheus** on `http://localhost:9090` (scrapes `host.docker.internal:8080/metrics`)
+- **Loki** on `http://localhost:3100` (log storage)
+- **Promtail** (tails `./logs/app.log` and ships to Loki)
+- **Grafana** on `http://localhost:3000` (login `admin` / `admin`)
+
+Grafana is pre-provisioned with the Prometheus + Loki datasources and a
+"BlackBird - HTTP Overview" dashboard (request rate, error rate, latency
+percentiles, in-flight, and a live Loki log panel).
+
+### Metrics exposed
+
+- `blackbird_http_requests_total{method,route,status}`
+- `blackbird_http_request_duration_seconds{method,route}` (histogram)
+- `blackbird_http_requests_in_flight`
+
+The `route` label uses the chi route pattern (e.g. `/users/{id}`) to keep
+cardinality bounded.
+
+### Sentry
+
+Set `SENTRY_DSN` to a sentry.io DSN to enable error tracking. When the DSN is
+empty, Sentry is fully disabled (no-op) and the app runs normally. Panics are
+captured and re-raised so the standard recovery still returns a 500; server-side
+errors (5xx) are reported as events tagged with the request ID, method, path,
+and status.
+
 ## Notes
 
 - Refresh cookies are marked `Secure`. For local HTTP testing, use HTTPS or adjust cookie settings.
+- The `monitoring/` stack assumes Docker Desktop (`host.docker.internal` resolves to the host). On plain Linux, the compose file maps `host.docker.internal` to the host gateway.
 - Rate limiting is in-memory per instance; for multi-instance deployments, use a shared limiter (e.g. Redis).
 - Seed `global_roles` with roles like `admin` and `user` before assigning them.
 

@@ -1,0 +1,36 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: blackbird
+    static_configs:
+      - targets: ["localhost"]
+        labels:
+          job: blackbird
+          service: blackbird
+          # BlackBird's JSON logs are mounted here from the host ./logs dir.
+          __path__: /var/log/blackbird/*.log
+    pipeline_stages:
+      # Parse the slog JSON so individual fields are queryable and the log
+      # timestamp/level drive Loki indexing.
+      - json:
+          expressions:
+            level: level
+            method: method
+            path: path
+            status: status
+            request_id: request_id
+            msg: msg
+            time: time
+      - labels:
+          level:
+      - timestamp:
+          source: time
+          format: RFC3339Nano

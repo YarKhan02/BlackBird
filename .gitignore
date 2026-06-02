@@ -1,2 +1,5 @@
 .env
 keys/private.pem
+logs/
+*.exe
+bb-server

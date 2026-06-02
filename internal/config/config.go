@@ -20,6 +20,12 @@ type Config struct {
 	JWTIssuer         string
 	AccessTokenTTL    time.Duration
 	RefreshTokenTTL   time.Duration
+	LogLevel          string
+	LogFile           string
+
+	SentryDSN              string
+	SentryEnvironment      string
+	SentryTracesSampleRate float64
 }
 
 func Load() (*Config, error) {
@@ -33,6 +39,8 @@ func Load() (*Config, error) {
 		RSAPrivateKeyPath: getEnv("RSA_PRIVATE_KEY_PATH", "./keys/private.pem"),
 		Env:               getEnv("ENV", "development"),
 		JWTIssuer:         getEnv("JWT_ISSUER", "auth.shoukan-labs.com"),
+		LogLevel:          getEnv("LOG_LEVEL", "info"),
+		LogFile:           getEnv("LOG_FILE", "./logs/app.log"),
 	}
 
 	limitStr := getEnv("RATE_LIMIT_REQUESTS", "100")
@@ -59,6 +67,15 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid REFRESH_TOKEN_TTL: %w", err)
 	}
 	cfg.RefreshTokenTTL = refreshTTL
+
+	cfg.SentryDSN = getEnv("SENTRY_DSN", "")
+	cfg.SentryEnvironment = getEnv("SENTRY_ENVIRONMENT", cfg.Env)
+
+	sampleRate, err := strconv.ParseFloat(getEnv("SENTRY_TRACES_SAMPLE_RATE", "0.0"), 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid SENTRY_TRACES_SAMPLE_RATE: %w", err)
+	}
+	cfg.SentryTracesSampleRate = sampleRate
 
 	return cfg, nil
 }

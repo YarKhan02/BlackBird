@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	apihttp "github.com/YarKhan02/BlackBird/internal/api/http"
@@ -16,38 +17,66 @@ import (
 	"github.com/YarKhan02/BlackBird/internal/infrastructure/crypto"
 	"github.com/YarKhan02/BlackBird/internal/infrastructure/postgre"
 	"github.com/YarKhan02/BlackBird/internal/infrastructure/redis"
+	"github.com/YarKhan02/BlackBird/internal/observability/logging"
+	"github.com/YarKhan02/BlackBird/internal/observability/sentryobs"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+const serviceName = "blackbird"
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		// Logger isn't built yet; use a minimal stderr logger for this fatal.
+		slog.New(slog.NewJSONHandler(os.Stderr, nil)).
+			Error("failed to load config", slog.Any("error", err))
+		os.Exit(1)
 	}
+
+	logger, logCloser := logging.New(logging.Options{
+		Level:    cfg.LogLevel,
+		FilePath: cfg.LogFile,
+		Service:  serviceName,
+		Env:      cfg.Env,
+	})
+	defer logCloser.Close()
+	slog.SetDefault(logger)
+
+	sentryEnabled, sentryFlush := sentryobs.Init(sentryobs.Options{
+		DSN:              cfg.SentryDSN,
+		Environment:      cfg.SentryEnvironment,
+		Release:          serviceName,
+		TracesSampleRate: cfg.SentryTracesSampleRate,
+	}, logger)
+	defer sentryFlush()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	db, err := sql.Open("pgx", cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		logger.Error("failed to connect to database", slog.Any("error", err))
+		os.Exit(1)
 	}
 	defer db.Close()
 
 	if err := db.PingContext(ctx); err != nil {
-		log.Fatalf("database ping failed: %v", err)
+		logger.Error("database ping failed", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	blocklist, err := redis.NewBlocklist(cfg.RedisURL)
 	if err != nil {
-		log.Fatalf("failed to connect to redis: %v", err)
+		logger.Error("failed to connect to redis", slog.Any("error", err))
+		os.Exit(1)
 	}
 	defer blocklist.Close()
 
 	key, err := crypto.LoadRSAPrivateKey(cfg.RSAPrivateKeyPath)
 	if err != nil {
-		log.Fatalf("failed to load RSA key: %v", err)
+		logger.Error("failed to load RSA key", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	userRepo := postgre.NewUserRepository(db)
@@ -58,10 +87,11 @@ func main() {
 	userSvc := user.NewService(userRepo, roleSvc)
 	tokenSvc := token.NewService(key, tokenRepo, cfg.JWTIssuer, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
-	srv := apihttp.NewServer(cfg, userSvc, tokenSvc, roleSvc, blocklist)
+	srv := apihttp.NewServer(cfg, logger, sentryEnabled, userSvc, tokenSvc, roleSvc, blocklist)
 
-	log.Printf("listening on %s", cfg.Addr)
+	logger.Info("server starting", slog.String("addr", cfg.Addr))
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("server error: %v", err)
+		logger.Error("server error", slog.Any("error", err))
+		os.Exit(1)
 	}
 }

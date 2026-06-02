@@ -1,6 +1,7 @@
 package http
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -11,12 +12,16 @@ import (
 	"github.com/YarKhan02/BlackBird/internal/domain/token"
 	"github.com/YarKhan02/BlackBird/internal/domain/user"
 	"github.com/YarKhan02/BlackBird/internal/infrastructure/redis"
+	"github.com/YarKhan02/BlackBird/internal/observability/metrics"
+	"github.com/YarKhan02/BlackBird/internal/observability/sentryobs"
 	"github.com/go-chi/chi/v5"
 	chimid "github.com/go-chi/chi/v5/middleware"
 )
 
 func NewServer(
 	cfg *config.Config,
+	logger *slog.Logger,
+	sentryEnabled bool,
 	userSvc *user.Service,
 	tokenSvc *token.Service,
 	roleSvc *role.Service,
@@ -26,7 +31,11 @@ func NewServer(
 	r.Use(chimid.RequestID)
 	r.Use(chimid.RealIP)
 	r.Use(chimid.Recoverer)
-	r.Use(apimiddleware.Logger)
+	if sentryEnabled {
+		r.Use(sentryobs.Middleware())
+	}
+	r.Use(apimiddleware.RequestLogger(logger))
+	r.Use(metrics.Middleware)
 	r.Use(apimiddleware.RateLimit(cfg.RateLimitRequests, cfg.RateLimitWindow))
 
 	authHandler := handler.NewAuthHandler(userSvc, tokenSvc)
@@ -36,6 +45,8 @@ func NewServer(
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
+
+	r.Handle("/metrics", metrics.Handler())
 
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)

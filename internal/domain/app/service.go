@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/YarKhan02/BlackBird/internal/infrastructure/crypto"
+	"github.com/google/uuid"
 )
 
 var (
@@ -49,8 +50,10 @@ func (s *Service) RegisterApp(ctx context.Context, name string, redirectURI stri
 		ClientID:         clientID,
 		ClientSecretHash: string(hash),
 		Name:             name,
-		RedirectURIs:     []string{redirectURI},
 		IsActive:         true,
+	}
+	if redirectURI != "" {
+		app.RedirectURIs = []string{redirectURI}
 	}
 
 	if err := s.repo.Create(ctx, app); err != nil {
@@ -58,6 +61,14 @@ func (s *Service) RegisterApp(ctx context.Context, name string, redirectURI stri
 	}
 
 	return &RegisteredApp{App: app, ClientSecret: clientSecret}, nil
+}
+
+func (s *Service) List(ctx context.Context) ([]*App, error) {
+	return s.repo.List(ctx)
+}
+
+func (s *Service) Deactivate(ctx context.Context, id uuid.UUID) error {
+	return s.repo.Deactivate(ctx, id)
 }
 
 func (s *Service) Authenticate(ctx context.Context, clientID, clientSecret string) (*App, error) {

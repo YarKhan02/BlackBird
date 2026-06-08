@@ -12,4 +12,5 @@ type Repository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*App, error)
 	FindByClientID(ctx context.Context, clientID string) (*App, error)
 	List(ctx context.Context) ([]*App, error)
+	Deactivate(ctx context.Context, id uuid.UUID) error
 }

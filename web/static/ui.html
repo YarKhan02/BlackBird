@@ -1,0 +1,478 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;
+  --surface:#111118;
+  --surface2:#18181f;
+  --border:#252530;
+  --border2:#2e2e3a;
+  --text:#e8e8f0;
+  --muted:#6b6b80;
+  --dim:#3a3a4a;
+  --accent:#5b6af5;
+  --accent-hover:#6b7bff;
+  --accent-dim:#1a1d3e;
+  --green:#3ecf8e;
+  --green-dim:#0e2a1e;
+  --red:#f46060;
+  --red-dim:#2a0e0e;
+  --amber:#f5a623;
+  --amber-dim:#2a1e0a;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'IBM Plex Sans',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;font-size:14px}
+input,button{font-family:var(--sans)}
+input{background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:10px 14px;width:100%;font-size:14px;outline:none;transition:border-color .15s}
+input:focus{border-color:var(--accent)}
+input::placeholder{color:var(--dim)}
+button{cursor:pointer;border:none;font-size:14px;font-weight:500;transition:all .15s}
+label{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px}
+.badge-green{background:var(--green-dim);color:var(--green);border:1px solid rgba(62,207,142,.2)}
+.badge-gray{background:var(--surface2);color:var(--dim);border:1px solid var(--border)}
+/* LOGIN */
+#login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.login-logo{width:40px;height:40px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:24px;box-shadow:0 0 40px rgba(91,106,245,.3)}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px;width:100%;max-width:400px}
+.login-card h1{font-size:22px;font-weight:600;margin-bottom:4px}
+.login-card p{color:var(--muted);font-size:13px;margin-bottom:28px}
+.field{margin-bottom:16px}
+.btn-primary{width:100%;background:var(--accent);color:#fff;padding:11px;border-radius:8px;font-size:14px;font-weight:600;margin-top:8px}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.server-url-row{width:100%;max-width:400px;margin-bottom:20px}
+.server-url-row label{font-size:11px;color:var(--muted);margin-bottom:5px}
+.server-url-row input{font-family:var(--mono);font-size:12px;padding:8px 12px}
+.error-box{background:var(--red-dim);border:1px solid rgba(244,96,96,.3);color:var(--red);border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:12px}
+/* DASHBOARD */
+#dashboard{display:none;min-height:100vh;flex-direction:column}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo-sm{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
+.header-title{font-weight:600;font-size:15px}
+.header-url{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--surface2);padding:3px 8px;border-radius:5px}
+.btn-ghost{background:none;color:var(--muted);padding:6px 12px;border-radius:6px;font-size:13px}
+.btn-ghost:hover{color:var(--text);background:var(--surface2)}
+main{flex:1;max-width:900px;margin:0 auto;padding:32px 24px;width:100%}
+.section-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px}
+.section-title h2{font-size:18px;font-weight:600}
+.section-title p{color:var(--muted);font-size:13px;margin-top:3px}
+.btn-accent{background:var(--accent);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600}
+.btn-accent:hover{background:var(--accent-hover)}
+.empty-state{border:1.5px dashed var(--border2);border-radius:14px;padding:60px 24px;text-align:center;color:var(--muted)}
+.empty-state .empty-icon{font-size:28px;margin-bottom:12px;opacity:.4}
+.empty-state p{font-size:13px;line-height:1.6}
+.app-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:10px;transition:border-color .15s}
+.app-card:hover{border-color:var(--border2)}
+.app-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.app-name{font-weight:600;font-size:15px}
+.app-meta{margin-top:2px;font-size:12px;color:var(--muted)}
+.kv-rows{display:flex;flex-direction:column;gap:6px}
+.kv-row{display:flex;align-items:center;gap:8px}
+.kv-label{font-size:11px;color:var(--muted);width:68px;flex-shrink:0;font-family:var(--mono)}
+.kv-val{font-family:var(--mono);font-size:12px;color:var(--text);background:var(--surface2);padding:4px 10px;border-radius:5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kv-val.accent{color:var(--accent)}
+.copy-btn{font-size:11px;font-weight:500;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:3px 9px;border-radius:5px;white-space:nowrap;flex-shrink:0}
+.copy-btn:hover{color:var(--text);border-color:var(--dim)}
+.copy-btn.copied{color:var(--green);border-color:rgba(62,207,142,.3)}
+.deactivate-btn{font-size:12px;color:var(--red);background:none;opacity:.6}
+.deactivate-btn:hover{opacity:1}
+.loading-row{text-align:center;color:var(--muted);padding:40px;font-size:13px}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100;backdrop-filter:blur(2px)}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:28px;width:100%;max-width:460px}
+.modal h3{font-size:17px;font-weight:600;margin-bottom:4px}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
+.modal-actions{display:flex;gap:10px;margin-top:22px}
+.btn-cancel{flex:1;background:var(--surface2);color:var(--text);padding:10px;border-radius:8px}
+.btn-cancel:hover{background:var(--border2)}
+.btn-confirm{flex:1;background:var(--accent);color:#fff;padding:10px;border-radius:8px;font-weight:600}
+.btn-confirm:hover{background:var(--accent-hover)}
+.btn-confirm:disabled{opacity:.5;cursor:not-allowed}
+/* CREDENTIALS MODAL */
+.creds-success{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.cred-check{width:32px;height:32px;background:var(--green-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--green);flex-shrink:0}
+.warning-box{background:var(--amber-dim);border:1px solid rgba(245,166,35,.25);color:var(--amber);border-radius:8px;padding:11px 14px;font-size:12px;line-height:1.6;margin-bottom:18px}
+.cred-field{margin-bottom:10px}
+.cred-field label{font-size:11px;color:var(--muted);margin-bottom:5px}
+.cred-row{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.cred-val{font-family:var(--mono);font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cred-val.green{color:var(--green)}
+.cred-val.amber{color:var(--amber)}
+.env-snippet{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:14px}
+.env-snippet-label{font-size:11px;color:var(--muted);margin-bottom:6px}
+.env-snippet code{font-family:var(--mono);font-size:11px;color:var(--green);line-height:1.8}
+.btn-done{width:100%;background:var(--surface2);color:var(--text);padding:11px;border-radius:8px;margin-top:16px;font-weight:500}
+.btn-done:hover{background:var(--border2)}
+.divider{height:1px;background:var(--border);margin:28px 0}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:32px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px}
+.stat-num{font-size:24px;font-weight:600;font-family:var(--mono)}
+.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+.stat-card .stat-num.accent{color:var(--accent)}
+.stat-card .stat-num.green{color:var(--green)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="server-url-row">
+    <label>Auth Server URL</label>
+    <input type="text" id="server-url" value="http://localhost:8080" placeholder="http://localhost:8080"/>
+  </div>
+  <div style="text-align:center;margin-bottom:24px">
+    <div class="login-logo">🔐</div>
+  </div>
+  <div class="login-card">
+    <h1>Auth Admin</h1>
+    <p>Sign in to manage your auth server</p>
+    <div id="login-error" class="error-box" style="display:none"></div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="you@example.com"/>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••"/>
+    </div>
+    <button class="btn-primary" id="login-btn">Sign in</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <header>
+    <div class="header-left">
+      <div class="logo-sm">A</div>
+      <span class="header-title">Auth Admin</span>
+      <span class="header-url" id="header-url"></span>
+    </div>
+    <button class="btn-ghost" id="logout-btn">Sign out</button>
+  </header>
+  <main>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num accent" id="stat-apps">—</div>
+        <div class="stat-label">Registered Apps</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num green" id="stat-active">—</div>
+        <div class="stat-label">Active Apps</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-inactive">—</div>
+        <div class="stat-label">Inactive Apps</div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">
+        <h2>Registered Apps</h2>
+        <p>Each app gets a client_id to scope JWT roles</p>
+      </div>
+      <button class="btn-accent" id="register-app-btn">+ Register App</button>
+    </div>
+
+    <div id="apps-error" class="error-box" style="display:none"></div>
+    <div id="apps-loading" class="loading-row" style="display:none">Loading apps…</div>
+    <div id="apps-empty" class="empty-state" style="display:none">
+      <div class="empty-icon">📦</div>
+      <p>No apps registered yet.<br/>Register your first app to get a client_id.</p>
+    </div>
+    <div id="apps-list"></div>
+  </main>
+</div>
+
+<!-- REGISTER APP MODAL -->
+<div class="modal-overlay" id="register-modal" style="display:none">
+  <div class="modal">
+    <h3>Register New App</h3>
+    <p class="modal-sub">The client secret is shown <strong>once only</strong>. Save it immediately.</p>
+    <div id="register-error" class="error-box" style="display:none"></div>
+    <div class="field">
+      <label>App Name</label>
+      <input type="text" id="new-app-name" placeholder="My Flask App"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="cancel-register">Cancel</button>
+      <button class="btn-confirm" id="confirm-register">Register</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREDENTIALS MODAL -->
+<div class="modal-overlay" id="creds-modal" style="display:none">
+  <div class="modal">
+    <div class="creds-success">
+      <div class="cred-check">✓</div>
+      <div>
+        <h3 id="creds-app-name">App Registered</h3>
+        <p style="font-size:12px;color:var(--muted)">Copy these now — the secret will never appear again</p>
+      </div>
+    </div>
+    <div class="warning-box">
+      ⚠ Store your client secret somewhere safe like a password manager or .env file. Once you close this dialog, it cannot be recovered.
+    </div>
+    <div class="cred-field">
+      <label>Client ID</label>
+      <div class="cred-row">
+        <span class="cred-val accent" id="creds-client-id"></span>
+        <button class="copy-btn" id="copy-client-id">Copy</button>
+      </div>
+    </div>
+    <div class="cred-field">
+      <label>Client Secret</label>
+      <div class="cred-row">
+        <span class="cred-val amber" id="creds-client-secret"></span>
+        <button class="copy-btn" id="copy-client-secret">Copy</button>
+      </div>
+    </div>
+    <div class="env-snippet">
+      <div class="env-snippet-label">Add to your Flask .env</div>
+      <code id="env-snippet-code"></code>
+    </div>
+    <button class="btn-done" id="close-creds">I've saved these credentials</button>
+  </div>
+</div>
+
+<script>
+let SERVER_URL = 'http://localhost:8080';
+let ACCESS_TOKEN = null;
+let APPS = [];
+
+const $ = id => document.getElementById(id);
+
+// ─── HELPERS ───────────────────────────────────────────
+async function api(path, opts = {}) {
+  const res = await fetch(SERVER_URL + path, {
+    ...opts,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(ACCESS_TOKEN ? { 'Authorization': 'Bearer ' + ACCESS_TOKEN } : {}),
+      ...(opts.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.error || 'HTTP ' + res.status);
+  }
+  return res.json();
+}
+
+function showError(id, msg) {
+  const el = $(id);
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideError(id) { $(id).style.display = 'none'; }
+
+function copyText(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ─── LOGIN ─────────────────────────────────────────────
+$('login-btn').addEventListener('click', async () => {
+  SERVER_URL = $('server-url').value.replace(/\/$/, '');
+  const btn = $('login-btn');
+  hideError('login-error');
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+  try {
+    const data = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: $('login-email').value,
+        password: $('login-password').value
+      })
+    });
+    ACCESS_TOKEN = data.access_token;
+    $('header-url').textContent = SERVER_URL;
+    $('login-screen').style.display = 'none';
+    $('dashboard').style.display = 'flex';
+    loadApps();
+  } catch (e) {
+    showError('login-error', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign in';
+  }
+});
+
+$('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('login-btn').click();
+});
+
+// ─── LOGOUT ────────────────────────────────────────────
+$('logout-btn').addEventListener('click', () => {
+  ACCESS_TOKEN = null;
+  APPS = [];
+  $('apps-list').innerHTML = '';
+  $('login-email').value = '';
+  $('login-password').value = '';
+  $('dashboard').style.display = 'none';
+  $('login-screen').style.display = 'flex';
+});
+
+// ─── LOAD APPS ─────────────────────────────────────────
+async function loadApps() {
+  $('apps-loading').style.display = 'block';
+  $('apps-empty').style.display = 'none';
+  $('apps-list').innerHTML = '';
+  hideError('apps-error');
+  try {
+    APPS = await api('/admin/apps') || [];
+    renderApps();
+    updateStats();
+  } catch (e) {
+    showError('apps-error', 'Failed to load apps: ' + e.message);
+  } finally {
+    $('apps-loading').style.display = 'none';
+  }
+}
+
+function updateStats() {
+  const active = APPS.filter(a => a.is_active).length;
+  $('stat-apps').textContent = APPS.length;
+  $('stat-active').textContent = active;
+  $('stat-inactive').textContent = APPS.length - active;
+}
+
+function renderApps() {
+  const list = $('apps-list');
+  if (!APPS.length) {
+    $('apps-empty').style.display = 'block';
+    return;
+  }
+  list.innerHTML = APPS.map(app => `
+    <div class="app-card" id="card-${app.id}">
+      <div class="app-card-top">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="app-name">${esc(app.name)}</span>
+            <span class="badge ${app.is_active ? 'badge-green' : 'badge-gray'}">
+              ${app.is_active ? '● Active' : '○ Inactive'}
+            </span>
+          </div>
+          <div class="app-meta">Registered ${fmtDate(app.created_at)}</div>
+        </div>
+        ${app.is_active ? `<button class="deactivate-btn" onclick="deactivateApp('${app.id}','${esc(app.name)}')">Deactivate</button>` : ''}
+      </div>
+      <div class="kv-rows">
+        <div class="kv-row">
+          <span class="kv-label">app_id</span>
+          <span class="kv-val">${app.id}</span>
+          <button class="copy-btn" onclick="copyText(this,'${app.id}')">Copy</button>
+        </div>
+        <div class="kv-row">
+          <span class="kv-label">client_id</span>
+          <span class="kv-val accent">${app.client_id}</span>
+          <button class="copy-btn" onclick="copyText(this,'${app.client_id}')">Copy</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtDate(d) { try { return new Date(d).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}); } catch { return d; } }
+
+// ─── REGISTER APP ──────────────────────────────────────
+$('register-app-btn').addEventListener('click', () => {
+  $('new-app-name').value = '';
+  hideError('register-error');
+  $('register-modal').style.display = 'flex';
+  setTimeout(() => $('new-app-name').focus(), 50);
+});
+
+$('cancel-register').addEventListener('click', () => {
+  $('register-modal').style.display = 'none';
+});
+
+$('new-app-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('confirm-register').click();
+  if (e.key === 'Escape') $('cancel-register').click();
+});
+
+$('confirm-register').addEventListener('click', async () => {
+  const name = $('new-app-name').value.trim();
+  if (!name) { showError('register-error', 'App name is required'); return; }
+  const btn = $('confirm-register');
+  btn.disabled = true;
+  btn.textContent = 'Registering…';
+  hideError('register-error');
+  try {
+    const app = await api('/admin/apps', {
+      method: 'POST',
+      body: JSON.stringify({ name })
+    });
+    $('register-modal').style.display = 'none';
+    showCredentials(app);
+    loadApps();
+  } catch (e) {
+    showError('register-error', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Register';
+  }
+});
+
+// ─── CREDENTIALS MODAL ─────────────────────────────────
+function showCredentials(app) {
+  $('creds-app-name').textContent = app.name;
+  $('creds-client-id').textContent = app.client_id;
+  $('creds-client-secret').textContent = app.client_secret;
+  $('env-snippet-code').innerHTML =
+    `APP_CLIENT_ID=${app.client_id}<br>APP_CLIENT_SECRET=${app.client_secret}`;
+  $('creds-modal').style.display = 'flex';
+}
+
+$('copy-client-id').addEventListener('click', function() {
+  copyText(this, $('creds-client-id').textContent);
+});
+$('copy-client-secret').addEventListener('click', function() {
+  copyText(this, $('creds-client-secret').textContent);
+});
+$('close-creds').addEventListener('click', () => {
+  $('creds-client-secret').textContent = '••••••••••••••••••••••••••••••••••••••';
+  $('creds-modal').style.display = 'none';
+});
+
+// ─── DEACTIVATE ────────────────────────────────────────
+async function deactivateApp(id, name) {
+  if (!confirm(`Deactivate "${name}"?\n\nAll tokens for this app will stop working.`)) return;
+  try {
+    await api('/admin/apps/' + id, { method: 'DELETE' });
+    loadApps();
+  } catch (e) {
+    alert('Failed to deactivate: ' + e.message);
+  }
+}
+
+// close modals on overlay click
+['register-modal','creds-modal'].forEach(id => {
+  $(id).addEventListener('click', e => {
+    if (e.target === $(id)) {
+      if (id === 'creds-modal') return; // don't close creds by accident
+      $(id).style.display = 'none';
+    }
+  });
+});
+</script>
+</body>
+</html>

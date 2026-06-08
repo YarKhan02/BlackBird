@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -20,11 +21,18 @@ type Config struct {
 	JWTIssuer         string
 	AccessTokenTTL    time.Duration
 	RefreshTokenTTL   time.Duration
+	AllowedOrigins    []string
 }
 
 func Load() (*Config, error) {
 	// Load .env if present to simplify local development.
 	_ = godotenv.Load()
+
+	originsRaw := getEnv("ALLOWED_ORIGINS", "http://localhost:4567")
+	origins := strings.Split(originsRaw, ",")
+	for i, o := range origins {
+		origins[i] = strings.TrimSpace(o)
+	}
 
 	cfg := &Config{
 		Addr:              getEnv("ADDR", ":8080"),
@@ -33,6 +41,7 @@ func Load() (*Config, error) {
 		RSAPrivateKeyPath: getEnv("RSA_PRIVATE_KEY_PATH", "./keys/private.pem"),
 		Env:               getEnv("ENV", "development"),
 		JWTIssuer:         getEnv("JWT_ISSUER", "auth.shoukan-labs.com"),
+		AllowedOrigins:    origins,
 	}
 
 	limitStr := getEnv("RATE_LIMIT_REQUESTS", "100")

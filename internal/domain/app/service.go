@@ -5,11 +5,13 @@ import (
 	"errors"
 
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/YarKhan02/BlackBird/internal/infrastructure/crypto"
 )
 
 var (
 	ErrAppNotFound        = errors.New("app not found")
-	ErrClientIDTaken      = errors.New("client id already registered")
+	ErrAppIDTaken         = errors.New("app id already registered")
 	ErrInvalidCredentials = errors.New("invalid client credentials")
 	ErrAppInactive        = errors.New("app is inactive")
 )
@@ -22,10 +24,20 @@ func NewService(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) RegisterApp(ctx context.Context, clientID, clientSecret, name string, redirectURIs []string) (*App, error) {
-	existing, _ := s.repo.FindByClientID(ctx, clientID)
+func (s *Service) RegisterApp(ctx context.Context, name string, redirectURI string) (*RegisteredApp, error) {
+	existing, _ := s.repo.FindByName(ctx, name)
 	if existing != nil {
-		return nil, ErrClientIDTaken
+		return nil, ErrAppIDTaken
+	}
+
+	clientID, err := crypto.GenerateClientID(name)
+	if err != nil {
+		return nil, err
+	}
+
+	clientSecret, err := crypto.GenerateClientSecret()
+	if err != nil {
+		return nil, err
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(clientSecret), bcrypt.DefaultCost)
@@ -37,7 +49,7 @@ func (s *Service) RegisterApp(ctx context.Context, clientID, clientSecret, name 
 		ClientID:         clientID,
 		ClientSecretHash: string(hash),
 		Name:             name,
-		RedirectURIs:     redirectURIs,
+		RedirectURIs:     []string{redirectURI},
 		IsActive:         true,
 	}
 
@@ -45,7 +57,7 @@ func (s *Service) RegisterApp(ctx context.Context, clientID, clientSecret, name 
 		return nil, err
 	}
 
-	return app, nil
+	return &RegisteredApp{App: app, ClientSecret: clientSecret}, nil
 }
 
 func (s *Service) Authenticate(ctx context.Context, clientID, clientSecret string) (*App, error) {

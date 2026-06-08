@@ -15,3 +15,8 @@ type App struct {
 	IsActive         bool
 	CreatedAt        time.Time
 }
+
+type RegisteredApp struct {
+	App          *App
+	ClientSecret string
+}

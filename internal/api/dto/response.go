@@ -26,3 +26,12 @@ type RolesResponse struct {
 type GlobalRoleResponse struct {
 	Name string `json:"name"`
 }
+
+type RegisterAppResponse struct {
+	ID           uuid.UUID `json:"id"`
+	Name         string    `json:"name"`
+	ClientID     string    `json:"client_id"`
+	ClientSecret string    `json:"client_secret"`
+	RedirectURIs []string  `json:"redirect_uris"`
+	CreatedAt    string    `json:"created_at"`
+}

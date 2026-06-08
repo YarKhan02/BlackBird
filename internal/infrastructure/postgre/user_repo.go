@@ -43,8 +43,12 @@ var userBanSQL string
 var userUnbanSQL string
 
 func (r *UserRepository) Create(ctx context.Context, u *user.User) error {
-	u.ID = uuid.New()
-	err := r.db.QueryRowContext(ctx, userCreateSQL,
+	id, err := uuid.NewV7()
+	if err != nil {
+		return err
+	}
+	u.ID = id
+	err = r.db.QueryRowContext(ctx, userCreateSQL,
 		u.ID,
 		u.Email,
 		u.PasswordHash,

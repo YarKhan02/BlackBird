@@ -1,8 +1,11 @@
 package dto
 
 import (
+	"errors"
 	"fmt"
+	"net"
 	"net/mail"
+	"net/url"
 	"strings"
 
 	"github.com/google/uuid"
@@ -25,6 +28,93 @@ func (r RegisterRequest) Validate() error {
 		return fmt.Errorf("password must be at least 8 characters")
 	}
 	return nil
+}
+
+type RegisterAppRequest struct {
+	Name         string `json:"name"`
+	RedirectURI  string `json:"redirect_uri,omitempty"`
+	RedirectUI   string `json:"redirect_ui,omitempty"`
+	RedirectURIs string `json:"redirect_uris,omitempty"`
+}
+
+var (
+	ErrInvalidURL          = errors.New("invalid callback url")
+	ErrHTTPSRequired       = errors.New("https required")
+	ErrFragmentNotAllowed  = errors.New("fragments not allowed")
+	ErrUserInfoNotAllowed  = errors.New("userinfo not allowed")
+	ErrLocalhostNotAllowed = errors.New("localhost not allowed")
+	ErrPrivateIPNotAllowed = errors.New("private ip not allowed")
+	ErrHostNotAllowed      = errors.New("host not allowed")
+)
+
+func (r RegisterAppRequest) Validate() (string, error) {
+	if strings.TrimSpace(r.Name) == "" {
+		return "", errors.New("name is required")
+	}
+
+	rawURL := strings.TrimSpace(r.RedirectURI)
+	if rawURL == "" {
+		rawURL = strings.TrimSpace(r.RedirectUI)
+	}
+	if rawURL == "" {
+		rawURL = strings.TrimSpace(r.RedirectURIs)
+	}
+	if rawURL == "" {
+		return "", ErrInvalidURL
+	}
+
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "", ErrInvalidURL
+	}
+
+	if !u.IsAbs() {
+		return "", ErrInvalidURL
+	}
+
+	// OAuth callbacks should be HTTPS
+	// if strings.ToLower(u.Scheme) != "https" {
+	// 	return "", ErrHTTPSRequired
+	// }
+
+	// Prevent:
+	// https://admin:password@example.com/callback
+	if u.User != nil {
+		return "", ErrUserInfoNotAllowed
+	}
+
+	// Fragments never reach the server anyway and can cause confusion
+	if u.Fragment != "" {
+		return "", ErrFragmentNotAllowed
+	}
+
+	host := strings.ToLower(u.Hostname())
+
+	// Block localhost
+	// if host == "localhost" {
+	// 	return "", ErrLocalhostNotAllowed
+	// }
+
+	// Block IP addresses that are private/internal
+	if ip := net.ParseIP(host); ip != nil {
+		if ip.IsLoopback() ||
+			ip.IsPrivate() ||
+			ip.IsLinkLocalMulticast() ||
+			ip.IsLinkLocalUnicast() {
+			return "", ErrPrivateIPNotAllowed
+		}
+	}
+
+	// Normalize
+	u.Scheme = strings.ToLower(u.Scheme)
+	u.Host = strings.ToLower(u.Host)
+
+	// Remove default port
+	if strings.HasSuffix(u.Host, ":443") {
+		u.Host = host
+	}
+
+	return u.String(), nil
 }
 
 type LoginRequest struct {

@@ -10,6 +10,7 @@ import (
 
 	apihttp "github.com/YarKhan02/BlackBird/internal/api/http"
 	"github.com/YarKhan02/BlackBird/internal/config"
+	"github.com/YarKhan02/BlackBird/internal/domain/app"
 	"github.com/YarKhan02/BlackBird/internal/domain/role"
 	"github.com/YarKhan02/BlackBird/internal/domain/token"
 	"github.com/YarKhan02/BlackBird/internal/domain/user"
@@ -50,15 +51,17 @@ func main() {
 		log.Fatalf("failed to load RSA key: %v", err)
 	}
 
+	appRepo := postgre.NewAppRepository(db)
 	userRepo := postgre.NewUserRepository(db)
 	roleRepo := postgre.NewRoleRepository(db)
 	tokenRepo := postgre.NewTokenRepository(db)
 
+	appSvc := app.NewService(appRepo)
 	roleSvc := role.NewService(roleRepo)
 	userSvc := user.NewService(userRepo, roleSvc)
 	tokenSvc := token.NewService(key, tokenRepo, cfg.JWTIssuer, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
-	srv := apihttp.NewServer(cfg, userSvc, tokenSvc, roleSvc, blocklist)
+	srv := apihttp.NewServer(cfg, appSvc, userSvc, tokenSvc, roleSvc, blocklist)
 
 	log.Printf("listening on %s", cfg.Addr)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

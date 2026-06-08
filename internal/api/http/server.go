@@ -7,6 +7,7 @@ import (
 	"github.com/YarKhan02/BlackBird/internal/api/http/handler"
 	apimiddleware "github.com/YarKhan02/BlackBird/internal/api/http/middleware"
 	"github.com/YarKhan02/BlackBird/internal/config"
+	"github.com/YarKhan02/BlackBird/internal/domain/app"
 	"github.com/YarKhan02/BlackBird/internal/domain/role"
 	"github.com/YarKhan02/BlackBird/internal/domain/token"
 	"github.com/YarKhan02/BlackBird/internal/domain/user"
@@ -17,12 +18,14 @@ import (
 
 func NewServer(
 	cfg *config.Config,
+	appSvc *app.Service,
 	userSvc *user.Service,
 	tokenSvc *token.Service,
 	roleSvc *role.Service,
 	blocklist *redis.Blocklist,
 ) *http.Server {
 	r := chi.NewRouter()
+	r.Use(apimiddleware.CORS(cfg.AllowedOrigins))
 	r.Use(chimid.RequestID)
 	r.Use(chimid.RealIP)
 	r.Use(chimid.Recoverer)
@@ -32,6 +35,7 @@ func NewServer(
 	authHandler := handler.NewAuthHandler(userSvc, tokenSvc)
 	userHandler := handler.NewUserHandler(userSvc)
 	roleHandler := handler.NewRoleHandler(roleSvc)
+	appHandler := handler.NewAppHandler(appSvc)
 
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -41,7 +45,20 @@ func NewServer(
 		r.Post("/register", authHandler.Register)
 		r.Post("/login", authHandler.Login)
 		r.Post("/refresh", authHandler.Refresh)
-		r.Get("/jwks", authHandler.JWKS)
+	})
+
+	// Standard JWKS discovery path used by most OAuth2/OIDC clients
+	r.Get("/.well-known/jwks.json", authHandler.JWKS)
+
+	r.Route("/apps", func(r chi.Router) {
+		r.Group(func(r chi.Router) {
+			r.Use(
+				apimiddleware.CORS([]string{
+					"http://localhost:4567",
+				}),
+				apimiddleware.Auth(tokenSvc, blocklist))
+			r.Post("/register", appHandler.Register)
+		})
 	})
 
 	r.Route("/users", func(r chi.Router) {

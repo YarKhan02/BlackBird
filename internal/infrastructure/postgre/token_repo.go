@@ -36,12 +36,16 @@ var tokenListByUserSQL string
 var tokenDeleteExpiredSQL string
 
 func (r *TokenRepository) Create(ctx context.Context, rt *token.RefreshToken) error {
-	rt.ID = uuid.New()
+	id, err := uuid.NewV7()
+	if err != nil {
+		return err
+	}
+	rt.ID = id
 	var appID uuid.NullUUID
 	if rt.AppID != nil {
 		appID = uuid.NullUUID{UUID: *rt.AppID, Valid: true}
 	}
-	err := r.db.QueryRowContext(ctx, tokenCreateSQL,
+	err = r.db.QueryRowContext(ctx, tokenCreateSQL,
 		rt.ID,
 		rt.UserID,
 		rt.TokenHash,

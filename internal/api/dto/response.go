@@ -35,3 +35,11 @@ type RegisterAppResponse struct {
 	RedirectURIs []string  `json:"redirect_uris"`
 	CreatedAt    string    `json:"created_at"`
 }
+
+type AppResponse struct {
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	ClientID  string    `json:"client_id"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt string    `json:"created_at"`
+}

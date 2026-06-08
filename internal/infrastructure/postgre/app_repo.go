@@ -24,6 +24,9 @@ var appFindByClientIDSQL string
 //go:embed sql/app_list.sql
 var appListSQL string
 
+//go:embed sql/app_deactivate.sql
+var appDeactivateSQL string
+
 type AppRepository struct {
 	db *sql.DB
 }
@@ -88,14 +91,17 @@ func (r *AppRepository) List(ctx context.Context) ([]*app.App, error) {
 	return out, nil
 }
 
+func (r *AppRepository) Deactivate(ctx context.Context, id uuid.UUID) error {
+	_, err := r.db.ExecContext(ctx, appDeactivateSQL, id)
+	return err
+}
+
 func scanApp(scanner interface{ Scan(dest ...any) error }) (*app.App, error) {
 	var a app.App
 	err := scanner.Scan(
 		&a.ID,
 		&a.ClientID,
-		&a.ClientSecretHash,
 		&a.Name,
-		&a.RedirectURIs,
 		&a.IsActive,
 		&a.CreatedAt,
 	)

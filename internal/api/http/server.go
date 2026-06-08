@@ -12,6 +12,7 @@ import (
 	"github.com/YarKhan02/BlackBird/internal/domain/token"
 	"github.com/YarKhan02/BlackBird/internal/domain/user"
 	"github.com/YarKhan02/BlackBird/internal/infrastructure/redis"
+	"github.com/YarKhan02/BlackBird/web"
 	"github.com/go-chi/chi/v5"
 	chimid "github.com/go-chi/chi/v5/middleware"
 )
@@ -41,6 +42,16 @@ func NewServer(
 		w.WriteHeader(http.StatusOK)
 	})
 
+	r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
+		data, err := web.Static.ReadFile("static/ui.html")
+		if err != nil {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(data)
+	})
+
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)
 		r.Post("/login", authHandler.Login)
@@ -50,15 +61,12 @@ func NewServer(
 	// Standard JWKS discovery path used by most OAuth2/OIDC clients
 	r.Get("/.well-known/jwks.json", authHandler.JWKS)
 
-	r.Route("/apps", func(r chi.Router) {
-		r.Group(func(r chi.Router) {
-			r.Use(
-				apimiddleware.CORS([]string{
-					"http://localhost:4567",
-				}),
-				apimiddleware.Auth(tokenSvc, blocklist))
-			r.Post("/register", appHandler.Register)
-		})
+	r.Route("/admin/apps", func(r chi.Router) {
+		r.Use(apimiddleware.Auth(tokenSvc, blocklist))
+		r.Use(apimiddleware.RequireGlobalRole("super_admin"))
+		r.Get("/", appHandler.List)
+		r.Post("/", appHandler.Register)
+		r.Delete("/{id}", appHandler.Deactivate)
 	})
 
 	r.Route("/users", func(r chi.Router) {
@@ -70,7 +78,7 @@ func NewServer(
 
 		r.Group(func(r chi.Router) {
 			r.Use(apimiddleware.Auth(tokenSvc, blocklist))
-			r.Use(apimiddleware.RequireGlobalRole("admin"))
+			r.Use(apimiddleware.RequireGlobalRole("super_admin"))
 			r.Get("/{id}", userHandler.GetByID)
 			r.Post("/{id}/ban", userHandler.Ban)
 			r.Post("/{id}/unban", userHandler.Unban)
@@ -85,7 +93,7 @@ func NewServer(
 
 	r.Group(func(r chi.Router) {
 		r.Use(apimiddleware.Auth(tokenSvc, blocklist))
-		r.Use(apimiddleware.RequireGlobalRole("admin"))
+		r.Use(apimiddleware.RequireGlobalRole("super_admin"))
 		r.Get("/roles/global", roleHandler.ListGlobal)
 	})
 

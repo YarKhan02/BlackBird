@@ -59,8 +59,9 @@ func (r RegisterAppRequest) Validate() (string, error) {
 	if rawURL == "" {
 		rawURL = strings.TrimSpace(r.RedirectURIs)
 	}
+	// redirect URI is optional for admin-registered apps
 	if rawURL == "" {
-		return "", ErrInvalidURL
+		return "", nil
 	}
 
 	u, err := url.Parse(rawURL)

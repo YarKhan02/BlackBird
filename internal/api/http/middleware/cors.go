@@ -16,7 +16,7 @@ func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
                 w.Header().Set("Access-Control-Allow-Origin", origin)
                 w.Header().Set("Access-Control-Allow-Credentials", "true")  // required for cookies
                 w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-                w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+                w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Client-ID")
                 w.Header().Set("Vary", "Origin")
             }
 

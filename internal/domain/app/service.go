@@ -67,6 +67,18 @@ func (s *Service) List(ctx context.Context) ([]*App, error) {
 	return s.repo.List(ctx)
 }
 
+func (s *Service) FindByClientID(ctx context.Context, clientID string) (*AppFind, error) {
+	app, err := s.repo.FindByClientID(ctx, clientID)
+	if err != nil || app == nil {
+		return nil, ErrAppNotFound 
+	}
+	output := &AppFind{
+		ClientID:			app.ClientID,
+		IsActive:			app.IsActive,
+	}
+	return output, nil
+}
+
 func (s *Service) Deactivate(ctx context.Context, id uuid.UUID) error {
 	return s.repo.Deactivate(ctx, id)
 }

@@ -10,7 +10,7 @@ type RefreshToken struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
 	TokenHash string     // SHA-256 of raw token — never store raw
-	AppID     *uuid.UUID // nil for system-level tokens
+	AppID     string	 // nil for system-level tokens
 	IPAddress string
 	UserAgent string
 	ExpiresAt time.Time

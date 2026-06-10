@@ -52,6 +52,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (*User, 
 	u := &User{
 		Email:        email,
 		PasswordHash: hash,
+		IsVerified:   true,
 		GlobalRoles:  []string{"user"},
 		AppRoles:     make(map[string][]string),
 	}
@@ -67,6 +68,10 @@ func (s *Service) Authenticate(ctx context.Context, email, password string) (*Us
 	if err != nil || u == nil {
 		// constant-time even on not found to prevent timing attacks
 		crypto.HashPassword(password) //nolint:errcheck
+		return nil, ErrInvalidCredentials
+	}
+
+	if !u.IsVerified {
 		return nil, ErrInvalidCredentials
 	}
 

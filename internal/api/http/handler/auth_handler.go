@@ -6,17 +6,19 @@ import (
 	"net/http"
 
 	"github.com/YarKhan02/BlackBird/internal/api/dto"
+	"github.com/YarKhan02/BlackBird/internal/domain/app"
 	"github.com/YarKhan02/BlackBird/internal/domain/token"
 	"github.com/YarKhan02/BlackBird/internal/domain/user"
 )
 
 type AuthHandler struct {
+	appSvc	 *app.Service
 	userSvc  *user.Service
 	tokenSvc *token.Service
 }
 
-func NewAuthHandler(userSvc *user.Service, tokenSvc *token.Service) *AuthHandler {
-	return &AuthHandler{userSvc: userSvc, tokenSvc: tokenSvc}
+func NewAuthHandler(appSvc *app.Service, userSvc *user.Service, tokenSvc *token.Service) *AuthHandler {
+	return &AuthHandler{appSvc: appSvc, userSvc: userSvc, tokenSvc: tokenSvc}
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -46,6 +48,21 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	clientID := r.Header.Get("X-Client-ID")
+	if clientID == "" {
+		writeError(w, http.StatusBadRequest, "missing X-Client-ID header")
+		return
+	}
+	a, err := h.appSvc.FindByClientID(r.Context(), clientID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	if !a.IsActive {
+		writeError(w, http.StatusForbidden, "application is deactivated")
+		return
+	}
+
 	var req dto.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request")
@@ -70,7 +87,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, err := h.tokenSvc.IssueAccessToken(u)
+	accessToken, err := h.tokenSvc.IssueAccessToken(u, clientID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to issue access token")
 		return
@@ -80,7 +97,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 		ip = host
 	}
-	refreshToken, err := h.tokenSvc.IssueRefreshToken(r.Context(), u, req.AppID,
+	refreshToken, err := h.tokenSvc.IssueRefreshToken(r.Context(), u, clientID,
 		ip, r.UserAgent())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to issue refresh token")
@@ -105,6 +122,21 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+	clientID := r.Header.Get("X-Client-ID")
+	if clientID == "" {
+		writeError(w, http.StatusBadRequest, "missing X-Client-ID header")
+		return
+	}
+	a, err := h.appSvc.FindByClientID(r.Context(), clientID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	if !a.IsActive {
+		writeError(w, http.StatusForbidden, "application is deactivated")
+		return
+	}
+
 	cookie, err := r.Cookie("refresh_token")
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "missing refresh token")
@@ -123,7 +155,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, err := h.tokenSvc.IssueAccessToken(u)
+	accessToken, err := h.tokenSvc.IssueAccessToken(u, clientID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to issue access token")
 		return

@@ -20,3 +20,8 @@ type RegisteredApp struct {
 	App          *App
 	ClientSecret string
 }
+
+type AppFind struct {
+	ClientID		string
+	IsActive		bool
+}

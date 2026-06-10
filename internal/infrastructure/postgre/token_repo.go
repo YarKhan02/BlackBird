@@ -41,9 +41,9 @@ func (r *TokenRepository) Create(ctx context.Context, rt *token.RefreshToken) er
 		return err
 	}
 	rt.ID = id
-	var appID uuid.NullUUID
-	if rt.AppID != nil {
-		appID = uuid.NullUUID{UUID: *rt.AppID, Valid: true}
+	appID := sql.NullString{
+		String: rt.AppID,
+		Valid:  rt.AppID != "",
 	}
 	err = r.db.QueryRowContext(ctx, tokenCreateSQL,
 		rt.ID,
@@ -100,7 +100,7 @@ func (r *TokenRepository) DeleteExpired(ctx context.Context) (int64, error) {
 
 func scanRefreshToken(scanner interface{ Scan(dest ...any) error }) (*token.RefreshToken, error) {
 	var rt token.RefreshToken
-	var appID uuid.NullUUID
+	var appID sql.NullString
 	var revokedAt sql.NullTime
 	if err := scanner.Scan(
 		&rt.ID,
@@ -121,7 +121,9 @@ func scanRefreshToken(scanner interface{ Scan(dest ...any) error }) (*token.Refr
 	}
 
 	if appID.Valid {
-		rt.AppID = &appID.UUID
+		rt.AppID = appID.String
+	} else {
+		rt.AppID = ""
 	}
 	if revokedAt.Valid {
 		rt.RevokedAt = &revokedAt.Time

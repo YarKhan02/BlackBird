@@ -121,7 +121,6 @@ func (r RegisterAppRequest) Validate() (string, error) {
 type LoginRequest struct {
 	Email    string     `json:"email"`
 	Password string     `json:"password"`
-	AppID    *uuid.UUID `json:"app_id,omitempty"`
 }
 
 func (r LoginRequest) Validate() error {

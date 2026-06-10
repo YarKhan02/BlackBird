@@ -23,6 +23,7 @@ var ErrInvalidRefreshToken = errors.New("invalid or expired refresh token")
 // Claims is the JWT payload. Used by both service (sign) and middleware (verify).
 type Claims struct {
 	UserID      string              `json:"sub"`
+	ClientID	string				`json:"client_id"`
 	Email       string              `json:"email"`
 	GlobalRoles []string            `json:"global_roles"`
 	AppRoles    map[string][]string `json:"apps,omitempty"`
@@ -56,10 +57,11 @@ func NewService(
 }
 
 // IssueAccessToken signs a short-lived JWT with user identity and roles.
-func (s *Service) IssueAccessToken(u *user.User) (string, error) {
+func (s *Service) IssueAccessToken(u *user.User, clientID string) (string, error) {
 	now := time.Now()
 	claims := Claims{
 		UserID:      u.ID.String(),
+		ClientID:	 clientID,
 		Email:       u.Email,
 		GlobalRoles: u.GlobalRoles,
 		AppRoles:    u.AppRoles,
@@ -78,7 +80,7 @@ func (s *Service) IssueAccessToken(u *user.User) (string, error) {
 }
 
 // IssueRefreshToken generates an opaque random token, stores its SHA-256 hash.
-func (s *Service) IssueRefreshToken(ctx context.Context, u *user.User, appID *uuid.UUID, ip, ua string) (string, error) {
+func (s *Service) IssueRefreshToken(ctx context.Context, u *user.User, appID string, ip, ua string) (string, error) {
 	raw := make([]byte, 64)
 	if _, err := rand.Read(raw); err != nil {
 		return "", fmt.Errorf("failed to generate refresh token: %w", err)

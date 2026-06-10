@@ -33,7 +33,7 @@ func NewServer(
 	r.Use(apimiddleware.Logger)
 	r.Use(apimiddleware.RateLimit(cfg.RateLimitRequests, cfg.RateLimitWindow))
 
-	authHandler := handler.NewAuthHandler(userSvc, tokenSvc)
+	authHandler := handler.NewAuthHandler(appSvc, userSvc, tokenSvc)
 	userHandler := handler.NewUserHandler(userSvc)
 	roleHandler := handler.NewRoleHandler(roleSvc)
 	appHandler := handler.NewAppHandler(appSvc)

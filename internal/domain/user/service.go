@@ -25,6 +25,7 @@ const (
 // RoleLoader is a minimal interface so user.Service can load roles
 // without depending on the full role.Repository.
 type RoleLoader interface {
+	AddGlobalRole(ctx context.Context, userID uuid.UUID, roleID string) error
 	GetUserGlobalRoles(ctx context.Context, userID uuid.UUID) ([]string, error)
 	GetAllUserAppRoles(ctx context.Context, userID uuid.UUID) (map[string][]string, error)
 }
@@ -38,7 +39,7 @@ func NewService(userRepo Repository, roleLoader RoleLoader) *Service {
 	return &Service{userRepo: userRepo, roleLoader: roleLoader}
 }
 
-func (s *Service) Register(ctx context.Context, email, password string) (*User, error) {
+func (s *Service) Register(ctx context.Context, email, password string, role string) (*User, error) {
 	existing, _ := s.userRepo.FindByEmail(ctx, email)
 	if existing != nil {
 		return nil, ErrEmailTaken
@@ -53,11 +54,14 @@ func (s *Service) Register(ctx context.Context, email, password string) (*User, 
 		Email:        email,
 		PasswordHash: hash,
 		IsVerified:   true,
-		GlobalRoles:  []string{"user"},
+		GlobalRoles:  []string{role},
 		AppRoles:     make(map[string][]string),
 	}
 
 	if err := s.userRepo.Create(ctx, u); err != nil {
+		return nil, err
+	}
+	if err := s.roleLoader.AddGlobalRole(ctx, u.ID, role); err != nil {
 		return nil, err
 	}
 	return u, nil
@@ -91,6 +95,23 @@ func (s *Service) Authenticate(ctx context.Context, email, password string) (*Us
 			lockedUntil = &t
 		}
 		s.userRepo.UpdateFailedAttempts(ctx, u.ID, attempts, lockedUntil) //nolint:errcheck
+		return nil, ErrInvalidCredentials
+	}
+
+	globalRoles, err := s.roleLoader.GetUserGlobalRoles(ctx, u.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Require "super_admin" role for app login to prevent regular users from logging in via this endpoint.
+	hasSuperAdmin := false
+	for _, role := range globalRoles {
+		if role == "super_admin" {
+			hasSuperAdmin = true
+			break
+		}
+	}
+	if !hasSuperAdmin {
 		return nil, ErrInvalidCredentials
 	}
 

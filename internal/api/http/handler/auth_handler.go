@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 
@@ -21,6 +22,93 @@ func NewAuthHandler(appSvc *app.Service, userSvc *user.Service, tokenSvc *token.
 	return &AuthHandler{appSvc: appSvc, userSvc: userSvc, tokenSvc: tokenSvc}
 }
 
+func (h *AuthHandler) RegisterAdmin(w http.ResponseWriter, r *http.Request) {
+	var req dto.RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	if err := req.Validate(); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	u, err := h.userSvc.Register(r.Context(), req.Email, req.Password, "super_admin")
+	if err != nil {
+		fmt.Printf("failed to register admin: %v\n", err)
+		switch err {
+		case user.ErrEmailTaken:
+			writeError(w, http.StatusConflict, "email already registered")
+		default:
+			writeError(w, http.StatusInternalServerError, "registration failed")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, dto.UserResponse{ID: u.ID, Email: u.Email})
+}
+
+func (h *AuthHandler) LoginAdmin(w http.ResponseWriter, r *http.Request) {
+	
+	var req dto.LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	u, err := h.userSvc.Authenticate(r.Context(), req.Email, req.Password)
+	if err != nil {
+		switch err {
+		case user.ErrAccountLocked:
+			writeError(w, http.StatusLocked, "account temporarily locked")
+		case user.ErrAccountBanned:
+			writeError(w, http.StatusForbidden, "account banned")
+		default:
+			// always same message — don't leak which field is wrong
+			writeError(w, http.StatusUnauthorized, "invalid credentials")
+		}
+		return
+	}
+
+	accessToken, err := h.tokenSvc.IssueAccessToken(u, "")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to issue access token")
+		return
+	}
+
+	ip := r.RemoteAddr
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		ip = host
+	}
+	refreshToken, err := h.tokenSvc.IssueRefreshToken(r.Context(), u, "",
+		ip, r.UserAgent())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to issue refresh token")
+		return
+	}
+
+	// refresh token in HttpOnly cookie, access token in body
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+		Path:     "/auth/refresh",
+		MaxAge:   30 * 24 * 60 * 60,
+	})
+
+	writeJSON(w, http.StatusOK, dto.TokenResponse{
+		AccessToken: accessToken,
+		ExpiresIn:   900,
+	})
+}
+
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req dto.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -33,7 +121,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := h.userSvc.Register(r.Context(), req.Email, req.Password)
+	u, err := h.userSvc.Register(r.Context(), req.Email, req.Password, "user")
 	if err != nil {
 		switch err {
 		case user.ErrEmailTaken:

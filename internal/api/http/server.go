@@ -12,7 +12,6 @@ import (
 	"github.com/YarKhan02/BlackBird/internal/domain/token"
 	"github.com/YarKhan02/BlackBird/internal/domain/user"
 	"github.com/YarKhan02/BlackBird/internal/infrastructure/redis"
-	"github.com/YarKhan02/BlackBird/web"
 	"github.com/go-chi/chi/v5"
 	chimid "github.com/go-chi/chi/v5/middleware"
 )
@@ -36,25 +35,17 @@ func NewServer(
 	authHandler := handler.NewAuthHandler(appSvc, userSvc, tokenSvc)
 	userHandler := handler.NewUserHandler(userSvc)
 	roleHandler := handler.NewRoleHandler(roleSvc)
-	appHandler := handler.NewAppHandler(appSvc)
+	appHandler 	:= handler.NewAppHandler(appSvc)
 
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
-		data, err := web.Static.ReadFile("static/ui.html")
-		if err != nil {
-			http.Error(w, "not found", http.StatusNotFound)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(data)
-	})
-
 	r.Route("/auth", func(r chi.Router) {
-		r.Post("/register", authHandler.Register)
-		r.Post("/login", authHandler.Login)
+		r.Post("/register", authHandler.RegisterAdmin)
+		r.Post("/app/register", authHandler.Register)
+		r.Post("/login", authHandler.LoginAdmin)
+		r.Post("/app/login", authHandler.Login)
 		r.Post("/refresh", authHandler.Refresh)
 	})
 

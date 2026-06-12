@@ -20,6 +20,9 @@ func NewRoleRepository(db *sql.DB) *RoleRepository {
 //go:embed sql/role_list_global.sql
 var roleListGlobalSQL string
 
+//go:embed sql/role_id_by_name.sql
+var roleIDByNameSQL string
+
 //go:embed sql/role_add_global.sql
 var roleAddGlobalSQL string
 
@@ -57,6 +60,18 @@ func (r *RoleRepository) ListGlobalRoles(ctx context.Context) ([]role.GlobalRole
 		out = append(out, item)
 	}
 	return out, rows.Err()
+}
+
+func (r *RoleRepository) GetGlobalRoleIDByName(ctx context.Context, roleName string) (uuid.UUID, error) {
+	var id uuid.UUID
+
+	err := r.db.QueryRowContext(ctx, roleIDByNameSQL, roleName).Scan(&id)
+
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return id, nil
 }
 
 func (r *RoleRepository) AddGlobalRole(ctx context.Context, userID uuid.UUID, roleName string) error {

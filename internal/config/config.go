@@ -28,7 +28,7 @@ func Load() (*Config, error) {
 	// Load .env if present to simplify local development.
 	_ = godotenv.Load()
 
-	originsRaw := getEnv("ALLOWED_ORIGINS", "http://localhost:4567")
+	originsRaw := getEnv("ALLOWED_ORIGINS", "http://localhost:3000")
 	origins := strings.Split(originsRaw, ",")
 	for i, o := range origins {
 		origins[i] = strings.TrimSpace(o)

@@ -1,5 +1,7 @@
 # Database Migration
 
+## Development
+
 ```sh
 go install github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
@@ -10,6 +12,14 @@ Then run the following command to apply the migrations:
 
 ```sh
 ./bin/db-migrate.sh
+```
+
+## Production
+
+```sh
+go get -u github.com/golang-migrate/migrate/v4
+go get -u github.com/golang-migrate/migrate/v4/database/pgx
+go get -u github.com/golang-migrate/migrate/v4/source/file
 ```
 
 # Chi Router

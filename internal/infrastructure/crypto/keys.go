@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 )
 
 func LoadRSAPrivateKey(path string) (*rsa.PrivateKey, error) {
@@ -18,9 +19,26 @@ func LoadRSAPrivateKey(path string) (*rsa.PrivateKey, error) {
 		return nil, err
 	}
 
+	return parseRSAPrivateKey(data, path)
+}
+
+func LoadRSAPrivateKeyFromPEM(pemData string) (*rsa.PrivateKey, error) {
+	data := strings.TrimSpace(pemData)
+	if data == "" {
+		return nil, fmt.Errorf("RSA_PRIVATE_KEY_PEM is empty")
+	}
+
+	// Support secrets entered with literal "\\n" newlines.
+	data = strings.ReplaceAll(data, "\\n", "\n")
+
+	return parseRSAPrivateKey([]byte(data), "RSA_PRIVATE_KEY_PEM")
+}
+
+func parseRSAPrivateKey(data []byte, source string) (*rsa.PrivateKey, error) {
+
 	block, _ := pem.Decode(data)
 	if block == nil {
-		return nil, fmt.Errorf("invalid PEM data in %s", path)
+		return nil, fmt.Errorf("invalid PEM data in %s", source)
 	}
 
 	if key, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {

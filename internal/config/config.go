@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -15,6 +16,8 @@ type Config struct {
 	DatabaseURL       string
 	RedisURL          string
 	RSAPrivateKeyPath string
+	RSAPrivateKeyPEM  string
+	MigrationsPath    string
 	RateLimitRequests int
 	RateLimitWindow   time.Duration
 	Env               string
@@ -35,10 +38,12 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		Addr:              getEnv("ADDR", ":8080"),
+		Addr:              normalizeAddr(getEnv("ADDR", getEnv("PORT", "8080"))),
 		DatabaseURL:       mustEnv("DATABASE_URL"),
 		RedisURL:          getEnv("REDIS_URL", "redis://localhost:6379"),
 		RSAPrivateKeyPath: getEnv("RSA_PRIVATE_KEY_PATH", "./keys/private.pem"),
+		RSAPrivateKeyPEM:  getEnv("RSA_PRIVATE_KEY_PEM", ""),
+		MigrationsPath:    getEnv("MIGRATIONS_PATH", "file://./migrations"),
 		Env:               getEnv("ENV", "development"),
 		JWTIssuer:         getEnv("JWT_ISSUER", "auth.shoukan-labs.com"),
 		AllowedOrigins:    origins,
@@ -85,4 +90,25 @@ func mustEnv(key string) string {
 		panic(fmt.Sprintf("required environment variable %q is not set", key))
 	}
 	return v
+}
+
+func normalizeAddr(raw string) string {
+	addr := strings.TrimSpace(raw)
+	if addr == "" {
+		return ":8080"
+	}
+
+	if strings.HasPrefix(addr, ":") {
+		return addr
+	}
+
+	if _, err := strconv.Atoi(addr); err == nil {
+		return ":" + addr
+	}
+
+	if _, _, err := net.SplitHostPort(addr); err == nil {
+		return addr
+	}
+
+	return addr
 }

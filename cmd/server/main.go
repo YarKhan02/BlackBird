@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rsa"
 	"database/sql"
 	"errors"
 	"log"
@@ -16,6 +17,7 @@ import (
 	"github.com/YarKhan02/BlackBird/internal/domain/user"
 	"github.com/YarKhan02/BlackBird/internal/infrastructure/crypto"
 	"github.com/YarKhan02/BlackBird/internal/infrastructure/postgre"
+	"github.com/YarKhan02/BlackBird/internal/infrastructure/postgre/database"
 	"github.com/YarKhan02/BlackBird/internal/infrastructure/redis"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -40,15 +42,27 @@ func main() {
 		log.Fatalf("database ping failed: %v", err)
 	}
 
+	if err := database.RunMigration(cfg.MigrationsPath, cfg.DatabaseURL); err != nil {
+		log.Fatalf("failed to migrate database: %v", err)
+	}
+
 	blocklist, err := redis.NewBlocklist(cfg.RedisURL)
 	if err != nil {
 		log.Fatalf("failed to connect to redis: %v", err)
 	}
 	defer blocklist.Close()
 
-	key, err := crypto.LoadRSAPrivateKey(cfg.RSAPrivateKeyPath)
-	if err != nil {
-		log.Fatalf("failed to load RSA key: %v", err)
+	var key *rsa.PrivateKey
+	var keyErr error
+	var keySource string
+
+	if cfg.RSAPrivateKeyPEM != "" {
+		keySource = "RSA_PRIVATE_KEY_PEM"
+		key, keyErr = crypto.LoadRSAPrivateKeyFromPEM(cfg.RSAPrivateKeyPEM)
+	}
+
+	if keyErr != nil {
+		log.Fatalf("failed to load RSA key from %s: %v", keySource, keyErr)
 	}
 
 	appRepo := postgre.NewAppRepository(db)

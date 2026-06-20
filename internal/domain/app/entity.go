@@ -11,7 +11,7 @@ type App struct {
 	ClientID         string
 	ClientSecretHash string
 	Name             string
-	RedirectURIs     []string
+	Origin           string
 	IsActive         bool
 	CreatedAt        time.Time
 }

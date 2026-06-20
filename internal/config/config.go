@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 	"encoding/base64"
 
@@ -23,17 +22,13 @@ type Config struct {
 	JWTIssuer         string
 	AccessTokenTTL    time.Duration
 	RefreshTokenTTL   time.Duration
-	AllowedOrigins    []string
+	AllowedOrigins    string
 }
 
 func Load() (*Config, error) {
 	_ = godotenv.Load()
 
-	originsRaw := getEnv("ALLOWED_ORIGINS")
-	origins := strings.Split(originsRaw, ",")
-	for i, o := range origins {
-		origins[i] = strings.TrimSpace(o)
-	}
+	origin := getEnv("ALLOWED_ORIGIN")
 
 	private_key, err := base64.StdEncoding.DecodeString(getEnv("RSA_PRIVATE_KEY_PEM"))
 	if err != nil {
@@ -48,7 +43,7 @@ func Load() (*Config, error) {
 		MigrationsPath:    getEnv("MIGRATIONS_PATH"),
 		Env:               getEnv("ENV"),
 		JWTIssuer:         getEnv("JWT_ISSUER"),
-		AllowedOrigins:    origins,
+		AllowedOrigins:    origin,
 	}
 
 	limitStr := getEnv("RATE_LIMIT_REQUESTS")

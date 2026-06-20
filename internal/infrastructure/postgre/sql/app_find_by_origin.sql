@@ -1,4 +1,4 @@
 SELECT 1
 FROM registered_apps
-WHERE name = $1
+WHERE orgin = $1
 LIMIT 1;

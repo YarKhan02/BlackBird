@@ -32,7 +32,7 @@ type RegisterAppResponse struct {
 	Name         string    `json:"name"`
 	ClientID     string    `json:"client_id"`
 	ClientSecret string    `json:"client_secret"`
-	RedirectURIs []string  `json:"redirect_uris"`
+	Origin       string    `json:"origin"`
 	CreatedAt    string    `json:"created_at"`
 }
 
@@ -40,6 +40,7 @@ type AppResponse struct {
 	ID        uuid.UUID `json:"id"`
 	Name      string    `json:"name"`
 	ClientID  string    `json:"client_id"`
+	Origin	  string    `json:"origin"`
 	IsActive  bool      `json:"is_active"`
 	CreatedAt string    `json:"created_at"`
 }

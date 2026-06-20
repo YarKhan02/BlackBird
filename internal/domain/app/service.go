@@ -13,6 +13,8 @@ import (
 var (
 	ErrAppNotFound        = errors.New("app not found")
 	ErrAppIDTaken         = errors.New("app id already registered")
+	ErrAppOriginTaken     = errors.New("app origin already registered")
+	ErrAppNamerTaken       = errors.New("app name already registered")
 	ErrInvalidCredentials = errors.New("invalid client credentials")
 	ErrAppInactive        = errors.New("app is inactive")
 )
@@ -25,10 +27,15 @@ func NewService(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) RegisterApp(ctx context.Context, name string, redirectURI string) (*RegisteredApp, error) {
-	existing, _ := s.repo.FindByName(ctx, name)
-	if existing != nil {
-		return nil, ErrAppIDTaken
+func (s *Service) RegisterApp(ctx context.Context, name string, origin string) (*RegisteredApp, error) {
+	existing, err := s.repo.FindByName(ctx, name)
+	if existing {
+		return nil, ErrAppNamerTaken
+	}
+
+	existing_origin, err := s.repo.FindByOrigin(ctx, origin)
+	if existing_origin {
+		return nil, ErrAppOriginTaken
 	}
 
 	clientID, err := crypto.GenerateClientID(name)
@@ -47,13 +54,11 @@ func (s *Service) RegisterApp(ctx context.Context, name string, redirectURI stri
 	}
 
 	app := &App{
-		ClientID:         clientID,
-		ClientSecretHash: string(hash),
-		Name:             name,
-		IsActive:         true,
-	}
-	if redirectURI != "" {
-		app.RedirectURIs = []string{redirectURI}
+		ClientID:         	clientID,
+		ClientSecretHash: 	string(hash),
+		Name:             	name,
+		Origin:		   		origin,
+		IsActive:         	true,
 	}
 
 	if err := s.repo.Create(ctx, app); err != nil {
@@ -65,6 +70,10 @@ func (s *Service) RegisterApp(ctx context.Context, name string, redirectURI stri
 
 func (s *Service) List(ctx context.Context) ([]*App, error) {
 	return s.repo.List(ctx)
+}
+
+func (s *Service) GetOrigins(ctx context.Context) ([]string, error) {
+	return s.repo.ListOrigins(ctx)
 }
 
 func (s *Service) FindByClientID(ctx context.Context, clientID string) (*AppFind, error) {

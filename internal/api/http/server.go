@@ -16,16 +16,10 @@ import (
 	chimid "github.com/go-chi/chi/v5/middleware"
 )
 
-func NewServer(
-	cfg *config.Config,
-	appSvc *app.Service,
-	userSvc *user.Service,
-	tokenSvc *token.Service,
-	roleSvc *role.Service,
-	blocklist *redis.Blocklist,
-) *http.Server {
+func NewServer(cfg *config.Config, appSvc *app.Service, userSvc *user.Service, tokenSvc *token.Service, roleSvc *role.Service, blocklist *redis.Blocklist) *http.Server {
+	
 	r := chi.NewRouter()
-	r.Use(apimiddleware.CORS(cfg.AllowedOrigins))
+	r.Use(apimiddleware.DynamicCORS([]string{cfg.AllowedOrigins}, appSvc.GetOrigins))
 	r.Use(chimid.RequestID)
 	r.Use(chimid.RealIP)
 	r.Use(chimid.Recoverer)

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -40,12 +41,12 @@ func (h *AppHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res := dto.RegisterAppResponse{
-		ID:           registered.App.ID,
-		Name:         registered.App.Name,
-		ClientID:     registered.App.ClientID,
-		ClientSecret: registered.ClientSecret,
-		RedirectURIs: registered.App.RedirectURIs,
-		CreatedAt:    registered.App.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		ID:           	registered.App.ID,
+		Name:         	registered.App.Name,
+		ClientID:     	registered.App.ClientID,
+		ClientSecret: 	registered.ClientSecret,
+		Origin: 	  	registered.App.Origin,
+		CreatedAt:    	registered.App.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	writeJSON(w, http.StatusCreated, res)
@@ -53,6 +54,7 @@ func (h *AppHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 func (h *AppHandler) List(w http.ResponseWriter, r *http.Request) {
 	apps, err := h.appSvc.List(r.Context())
+	fmt.Println(err)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list apps")
 		return
@@ -64,6 +66,7 @@ func (h *AppHandler) List(w http.ResponseWriter, r *http.Request) {
 			ID:        a.ID,
 			Name:      a.Name,
 			ClientID:  a.ClientID,
+			Origin:    a.Origin,
 			IsActive:  a.IsActive,
 			CreatedAt: a.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		})

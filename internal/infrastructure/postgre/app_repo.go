@@ -15,6 +15,9 @@ var appCreateSQL string
 //go:embed sql/app_find_by_name.sql
 var appFindByNameSQL string
 
+//go:embed sql/app_find_by_origin.sql
+var appFindByOriginSQL string
+
 //go:embed sql/app_find_by_id.sql
 var appFindByIDSQL string
 
@@ -23,6 +26,9 @@ var appFindByClientIDSQL string
 
 //go:embed sql/app_list.sql
 var appListSQL string
+
+//go:embed sql/app_list_origins.sql
+var appListOriginsSQL string
 
 //go:embed sql/app_deactivate.sql
 var appDeactivateSQL string
@@ -47,15 +53,22 @@ func (r *AppRepository) Create(ctx context.Context, a *app.App) error {
 		a.ClientID,
 		a.ClientSecretHash,
 		a.Name,
-		a.RedirectURIs,
+		a.Origin,
 		a.IsActive,
 	).Scan(&a.CreatedAt)
 	return err
 }
 
-func (r *AppRepository) FindByName(ctx context.Context, name string) (*app.App, error) {
-	row := r.db.QueryRowContext(ctx, appFindByNameSQL, name)
-	return scanApp(row)
+func (r *AppRepository) FindByName(ctx context.Context, name string) (bool, error) {
+	var exists bool
+	err := r.db.QueryRowContext(ctx, appFindByNameSQL, name).Scan(&exists)
+	return exists, err
+}
+
+func (r *AppRepository) FindByOrigin(ctx context.Context, origin string) (bool, error) {
+	var exists bool
+	err := r.db.QueryRowContext(ctx, appFindByOriginSQL, origin).Scan(&exists)
+	return exists, err
 }
 
 func (r *AppRepository) FindByID(ctx context.Context, id uuid.UUID) (*app.App, error) {
@@ -91,6 +104,30 @@ func (r *AppRepository) List(ctx context.Context) ([]*app.App, error) {
 	return out, nil
 }
 
+func (r *AppRepository) ListOrigins(ctx context.Context) ([]string, error) {
+	rows, err := r.db.QueryContext(ctx, appListOriginsSQL)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var origins []string
+
+	for rows.Next() {
+		var origin string
+		if err := rows.Scan(&origin); err != nil {
+			return nil, err
+		}
+		origins = append(origins, origin)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return origins, nil
+}
+
 func (r *AppRepository) Deactivate(ctx context.Context, id uuid.UUID) error {
 	_, err := r.db.ExecContext(ctx, appDeactivateSQL, id)
 	return err
@@ -102,6 +139,7 @@ func scanApp(scanner interface{ Scan(dest ...any) error }) (*app.App, error) {
 		&a.ID,
 		&a.ClientID,
 		&a.Name,
+		&a.Origin,
 		&a.IsActive,
 		&a.CreatedAt,
 	)

@@ -1,0 +1,1 @@
+SELECT origin FROM registered_apps WHERE is_active = true;

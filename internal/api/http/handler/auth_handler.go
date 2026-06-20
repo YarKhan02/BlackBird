@@ -141,6 +141,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "missing X-Client-ID header")
 		return
 	}
+	fmt.Println("%v", clientID)
 	a, err := h.appSvc.FindByClientID(r.Context(), clientID)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request")

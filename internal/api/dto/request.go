@@ -32,13 +32,11 @@ func (r RegisterRequest) Validate() error {
 
 type RegisterAppRequest struct {
 	Name         string `json:"name"`
-	RedirectURI  string `json:"redirect_uri,omitempty"`
-	RedirectUI   string `json:"redirect_ui,omitempty"`
-	RedirectURIs string `json:"redirect_uris,omitempty"`
+	Origin		 string `json:"origin"`
 }
 
 var (
-	ErrInvalidURL          = errors.New("invalid callback url")
+	ErrInvalidURL          = errors.New("invalid origin url")
 	ErrHTTPSRequired       = errors.New("https required")
 	ErrFragmentNotAllowed  = errors.New("fragments not allowed")
 	ErrUserInfoNotAllowed  = errors.New("userinfo not allowed")
@@ -52,19 +50,11 @@ func (r RegisterAppRequest) Validate() (string, error) {
 		return "", errors.New("name is required")
 	}
 
-	rawURL := strings.TrimSpace(r.RedirectURI)
-	if rawURL == "" {
-		rawURL = strings.TrimSpace(r.RedirectUI)
-	}
-	if rawURL == "" {
-		rawURL = strings.TrimSpace(r.RedirectURIs)
-	}
-	// redirect URI is optional for admin-registered apps
-	if rawURL == "" {
-		return "", nil
+	if strings.TrimSpace(r.Origin) == "" {
+		return "", errors.New("origin is required")
 	}
 
-	u, err := url.Parse(rawURL)
+	u, err := url.Parse(r.Origin)
 	if err != nil {
 		return "", ErrInvalidURL
 	}

@@ -8,9 +8,11 @@ import (
 
 type Repository interface {
 	Create(ctx context.Context, app *App) error
-	FindByName(ctx context.Context, name string) (*App, error)
+	FindByName(ctx context.Context, name string) (bool, error)
+	FindByOrigin(ctx context.Context, origin string) (bool, error)
 	FindByID(ctx context.Context, id uuid.UUID) (*App, error)
 	FindByClientID(ctx context.Context, clientID string) (*App, error)
 	List(ctx context.Context) ([]*App, error)
+	ListOrigins(ctx context.Context) ([]string, error)
 	Deactivate(ctx context.Context, id uuid.UUID) error
 }

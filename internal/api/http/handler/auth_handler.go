@@ -141,7 +141,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "missing X-Client-ID header")
 		return
 	}
-	fmt.Println("%v", clientID)
 	a, err := h.appSvc.FindByClientID(r.Context(), clientID)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request")
@@ -151,6 +150,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "application is deactivated")
 		return
 	}
+
 
 	var req dto.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

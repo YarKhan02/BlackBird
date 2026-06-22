@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"errors"
-
+	
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/YarKhan02/BlackBird/internal/infrastructure/crypto"
@@ -14,7 +14,7 @@ var (
 	ErrAppNotFound        = errors.New("app not found")
 	ErrAppIDTaken         = errors.New("app id already registered")
 	ErrAppOriginTaken     = errors.New("app origin already registered")
-	ErrAppNamerTaken       = errors.New("app name already registered")
+	ErrAppNameTaken       = errors.New("app name already registered")
 	ErrInvalidCredentials = errors.New("invalid client credentials")
 	ErrAppInactive        = errors.New("app is inactive")
 )
@@ -30,7 +30,7 @@ func NewService(repo Repository) *Service {
 func (s *Service) RegisterApp(ctx context.Context, name string, origin string) (*RegisteredApp, error) {
 	existing, err := s.repo.FindByName(ctx, name)
 	if existing {
-		return nil, ErrAppNamerTaken
+		return nil, ErrAppNameTaken
 	}
 
 	existing_origin, err := s.repo.FindByOrigin(ctx, origin)

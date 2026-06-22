@@ -99,7 +99,7 @@ func (h *AuthHandler) LoginAdmin(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
-		Path:     "/auth/refresh",
+		Path:     "/",
 		MaxAge:   30 * 24 * 60 * 60,
 	})
 
@@ -200,7 +200,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
-		Path:     "/auth/refresh",
+		Path:     "/",
 		MaxAge:   30 * 24 * 60 * 60,
 	})
 
@@ -256,7 +256,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
-		Path:     "/auth/refresh",
+		Path:     "/",
 		MaxAge:   30 * 24 * 60 * 60,
 	})
 

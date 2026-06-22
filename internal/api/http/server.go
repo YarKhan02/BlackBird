@@ -33,6 +33,7 @@ func NewServer(cfg *config.Config, appSvc *app.Service, userSvc *user.Service, t
 
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(http.StatusText(http.StatusOK)))
 	})
 
 	r.Route("/auth", func(r chi.Router) {

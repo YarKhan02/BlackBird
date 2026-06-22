@@ -98,10 +98,12 @@ func (s *Service) Authenticate(ctx context.Context, email, password string) (*Us
 		return nil, ErrInvalidCredentials
 	}
 
-	// globalRoles, err := s.roleLoader.GetUserGlobalRoles(ctx, u.ID)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	globalRoles, err := s.roleLoader.GetUserGlobalRoles(ctx, u.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	u.GlobalRoles = globalRoles
 
 	// Require "super_admin" role for app login to prevent regular users from logging in via this endpoint.
 	// hasSuperAdmin := false

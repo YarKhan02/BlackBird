@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -54,7 +53,6 @@ func (h *AppHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 func (h *AppHandler) List(w http.ResponseWriter, r *http.Request) {
 	apps, err := h.appSvc.List(r.Context())
-	fmt.Println(err)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list apps")
 		return

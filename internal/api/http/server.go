@@ -14,16 +14,18 @@ import (
 	"github.com/YarKhan02/BlackBird/internal/infrastructure/redis"
 	"github.com/go-chi/chi/v5"
 	chimid "github.com/go-chi/chi/v5/middleware"
+	"go.uber.org/zap"
 )
 
-func NewServer(cfg *config.Config, appSvc *app.Service, userSvc *user.Service, tokenSvc *token.Service, roleSvc *role.Service, blocklist *redis.Blocklist) *http.Server {
+func NewServer(cfg *config.Config, appSvc *app.Service, userSvc *user.Service, tokenSvc *token.Service, roleSvc *role.Service, blocklist *redis.Blocklist, logger *zap.Logger) *http.Server {
 	
 	r := chi.NewRouter()
 	r.Use(apimiddleware.DynamicCORS([]string{cfg.AllowedOrigins}, appSvc.GetOrigins))
 	r.Use(chimid.RequestID)
 	r.Use(chimid.RealIP)
 	r.Use(chimid.Recoverer)
-	r.Use(apimiddleware.Logger)
+	r.Use(apimiddleware.RequestContext(logger))
+	r.Use(apimiddleware.Logger(logger))
 	r.Use(apimiddleware.RateLimit(cfg.RateLimitRequests, cfg.RateLimitWindow))
 
 	authHandler := handler.NewAuthHandler(appSvc, userSvc, tokenSvc)

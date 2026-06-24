@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"strings"
-	"fmt"
 
 	"github.com/YarKhan02/BlackBird/internal/domain/token"
 	"github.com/YarKhan02/BlackBird/internal/infrastructure/redis"
@@ -31,16 +30,13 @@ func Auth(tokenSvc *token.Service, blocklist *redis.Blocklist) func(http.Handler
 
 			claims, err := tokenSvc.ValidateAccessToken(parts[1])
 			if err != nil {
-				fmt.Printf("failed to validate access token: %v\n", err)
-				http.Error(w, err.Error(), http.StatusUnauthorized)
+				http.Error(w, "invalid token", http.StatusUnauthorized)
 				return
 			}
 
 			if blocklist != nil && claims.ID != "" {
-				fmt.Println("blocklist: ", blocklist, "claims.ID: ", claims.ID)
 				blocked, err := blocklist.Contains(r.Context(), claims.ID)
 				if err != nil || blocked {
-					fmt.Printf("failed to nlovklist or claims.ID validate access token: %v\n", err)
 					http.Error(w, err.Error(), http.StatusUnauthorized)
 					return
 				}

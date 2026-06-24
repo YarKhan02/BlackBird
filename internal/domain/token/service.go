@@ -155,6 +155,7 @@ func (s *Service) RotateRefreshToken(ctx context.Context, rawToken string) (*Ref
 // ValidateAccessToken parses and verifies the JWT, returning its claims.
 func (s *Service) ValidateAccessToken(tokenStr string) (*Claims, error) {
 	claims := &Claims{}
+	fmt.Println("token: ", tokenStr)
 	_, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])

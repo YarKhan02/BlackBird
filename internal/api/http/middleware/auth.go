@@ -37,6 +37,7 @@ func Auth(tokenSvc *token.Service, blocklist *redis.Blocklist) func(http.Handler
 			}
 
 			if blocklist != nil && claims.ID != "" {
+				fmt.Println("blocklist: ", blocklist, "claims.ID: ", claims.ID)
 				blocked, err := blocklist.Contains(r.Context(), claims.ID)
 				if err != nil || blocked {
 					fmt.Printf("failed to nlovklist or claims.ID validate access token: %v\n", err)

@@ -21,6 +21,7 @@ import (
 	"github.com/YarKhan02/BlackBird/internal/infrastructure/redis"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -65,6 +66,9 @@ func main() {
 		log.Fatalf("failed to load RSA key from %s: %v", keySource, keyErr)
 	}
 
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+
 	appRepo := postgre.NewAppRepository(db)
 	userRepo := postgre.NewUserRepository(db)
 	roleRepo := postgre.NewRoleRepository(db)
@@ -75,7 +79,7 @@ func main() {
 	userSvc := user.NewService(userRepo, roleSvc)
 	tokenSvc := token.NewService(key, tokenRepo, cfg.JWTIssuer, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
-	srv := apihttp.NewServer(cfg, appSvc, userSvc, tokenSvc, roleSvc, blocklist)
+	srv := apihttp.NewServer(cfg, appSvc, userSvc, tokenSvc, roleSvc, blocklist, logger)
 
 	log.Printf("listening on %s", cfg.Addr)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

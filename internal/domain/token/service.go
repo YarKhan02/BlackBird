@@ -161,6 +161,7 @@ func (s *Service) ValidateAccessToken(tokenStr string) (*Claims, error) {
 		}
 		return s.publicKey, nil
 	})
+	fmt.Println("claims: ", claims)
 	if err != nil {
 		return nil, err
 	}

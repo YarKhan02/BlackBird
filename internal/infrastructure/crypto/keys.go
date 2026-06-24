@@ -4,32 +4,16 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"errors"
 	"fmt"
-	"os"
 	"strings"
 )
 
-func LoadRSAPrivateKey(path string) (*rsa.PrivateKey, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("private key not found at %s", path)
-		}
-		return nil, err
-	}
-
-	return parseRSAPrivateKey(data, path)
-}
 
 func LoadRSAPrivateKeyFromPEM(pemData string) (*rsa.PrivateKey, error) {
 	data := strings.TrimSpace(pemData)
 	if data == "" {
 		return nil, fmt.Errorf("RSA_PRIVATE_KEY_PEM is empty")
 	}
-
-	// Support secrets entered with literal "\\n" newlines.
-	data = strings.ReplaceAll(data, "\\n", "\n")
 
 	return parseRSAPrivateKey([]byte(data), "RSA_PRIVATE_KEY_PEM")
 }

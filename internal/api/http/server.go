@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 	"time"
+	"fmt"
 
 	"github.com/YarKhan02/BlackBird/internal/api/http/handler"
 	apimiddleware "github.com/YarKhan02/BlackBird/internal/api/http/middleware"
@@ -50,6 +51,7 @@ func NewServer(cfg *config.Config, appSvc *app.Service, userSvc *user.Service, t
 	r.Get("/.well-known/jwks.json", authHandler.JWKS)
 
 	r.Route("/admin/apps", func(r chi.Router) {
+		fmt.Println("Setting up /admin/apps routes")
 		r.Use(apimiddleware.Auth(tokenSvc, blocklist))
 		r.Use(apimiddleware.RequireGlobalRole("super_admin"))
 		r.Get("/", appHandler.List)
